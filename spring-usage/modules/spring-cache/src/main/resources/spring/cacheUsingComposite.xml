@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:p="http://www.springframework.org/schema/p" xmlns:cache="http://www.springframework.org/schema/cache"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd">
+
+	<bean id="jdkCacheManager"
+		class="org.springframework.cache.concurrent.ConcurrentMapCacheManager">
+		<property name="cacheNames">
+			<set>
+				<value>date_region</value>
+			</set>
+		</property>
+		<property name="allowNullValues" value="true" />
+	</bean>
+
+	<!-- ehcache2自己的CacheManager -->
+	<bean id="ehCacheManager"
+		class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean"
+		p:configLocation="classpath:ehcache/ehcache2.xml" />
+
+	<!-- 使用ehcache2的CacheManager来生成spring的CacheManager -->
+	<bean id="springEhCacheManager" class="org.springframework.cache.ehcache.EhCacheCacheManager"
+		p:cacheManager-ref="ehCacheManager" />
+
+	<!-- 创建一个复合的CacheManager，这个CacheManager能尝试从多个CacheManager中获取Cache对象。并且，该CacheManager允许对于聚合的CacheManager都无法获取到Cache 
+		时，也给出一个NoOpCache，该Cache的get()方法直接返回null。缓存处理机制发现无法从Cache中获取value，则会调用连接点方法。 
+		也就是说，CompositeCacheManager允许缓存操作提供一个未知的cacheName时，直接调用连接点方法。 -->
+	<bean id="compositeCacheManager" class="org.springframework.cache.support.CompositeCacheManager">
+		<property name="cacheManagers">
+			<set>
+				<ref bean="jdkCacheManager" />
+				<ref bean="springEhCacheManager" />
+			</set>
+		</property>
+
+		<!-- 如果设置"fallbackToNoOpCache"属性值为true，那么会在CompositeCacheManager中注册一个NoOpCacheManager。这个manager对于 
+			任意请求的cacheName，都会返回一个NoOpCache对象。该Cache对象不会进行任何缓存操作（包括get()和put()方法都是空实现）。因此，当使用 
+			该Cache的get()方法时，必然会返回null，最后导致连接点方法被调用。 -->
+		<!-- 该属性主要是为了，如果给出了未知的cacheName，CacheManager也不会报错，而是Cache返回null，最终导致调用连接点方法。 
+			因此，该属性可以用于测试时使用，想每次调用方法都直接调用连接点方法，而不是返回缓存的内容，就可以在连接点方法上设置一个没有的cacheName即可。 -->
+		<!-- Sometimes when switching environments or doing testing, one might 
+			have cache declarations without an actual backing cache configured. As this 
+			is an invalid configuration, at runtime an exception will be thrown since 
+			the caching infrastructure is unable to find a suitable store. In situations 
+			like this, rather then removing the cache declarations (which can prove tedious), 
+			one can wire in a simple, dummy cache that performs no caching - that is, 
+			forces the cached methods to be executed every time -->
+		<!-- The CompositeCacheManager above chains multiple CacheManagers and 
+			additionally, through the fallbackToNoOpCache flag, adds a no op cache that 
+			for all the definitions not handled by the configured cache managers. That 
+			is, every cache definition not found in either jdkCache or gemfireCache (configured 
+			above) will be handled by the no op cache, which will not store any information 
+			causing the target method to be executed every time. -->
+		<property name="fallbackToNoOpCache" value="true" />
+	</bean>
+
+	<!-- 给出一个CacheResolver，当有缓存操作使用该CacheResolver时，它就会使用引用的cacheManager，让这个cacheManager来寻找cacheNames属性对应的Cache -->
+	<bean id="specifiedCacheResolver"
+		class="org.springframework.cache.interceptor.NamedCacheResolver"
+		c:cacheNames="line_region,date_region" c:cacheManager-ref="compositeCacheManager" />
+
+	<bean class="com.spring.cache.composite.CompositeCacheService" />
+
+	<!-- 为当前容器（不包括父容器）中的带有@Cache*系列的注解的<bean>设置连接点 -->
+	<cache:annotation-driven cache-manager="compositeCacheManager" />
+
+	<bean id="methodLogger" class="com.spring.cache.aop.MethodLogger1" />
+
+	<aop:config expose-proxy="true" proxy-target-class="true">
+		<aop:pointcut
+			expression="com.spring.cache.aop.SystemArchitecture.cacheMethodsWithTarget(target) and this(proxy)"
+			id="cacheMethods" />
+
+		<aop:aspect ref="methodLogger">
+			<aop:before method="logBeforeInvocation" pointcut-ref="cacheMethods"
+				arg-names="target,proxy" />
+			<aop:after-throwing method="logOnException"
+				pointcut="com.spring.cache.aop.SystemArchitecture.cacheMethods()"
+				throwing="ex" arg-names="ex" />
+		</aop:aspect>
+	</aop:config>
+</beans>

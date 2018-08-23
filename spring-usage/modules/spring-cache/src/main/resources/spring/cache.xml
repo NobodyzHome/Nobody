@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:c="http://www.springframework.org/schema/c" xmlns:cache="http://www.springframework.org/schema/cache"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd">
+
+	<import resource="classpath*:spring/data-access.xml" />
+
+	<context:annotation-config />
+
+	<bean id="cacheManager"
+		class="org.springframework.cache.concurrent.ConcurrentMapCacheManager">
+		<property name="cacheNames">
+			<set>
+				<value>depts</value>
+				<value>lines</value>
+			</set>
+		</property>
+	</bean>
+
+	<!-- 注意：涉及到aop相关的，例如cache:advice,cache:annotation-driven，都只能对当前容器的包含连接点的<bean>产生代理对象，并不能对父容器的<bean>产生代理对象 -->
+	<cache:advice id="cacheAdvice" cache-manager="cacheManager">
+		<cache:caching>
+			<cache:cacheable cache="depts" condition="#condition.deptNo gt 0"
+				method="query*" key="#condition.deptNo" />
+				
+			<cache:cache-evict all-entries="true"
+				before-invocation="false" method="query*" cache="depts" />
+		</cache:caching>
+	</cache:advice>
+
+	<aop:config>
+		<aop:pointcut
+			expression="execution(@org.springframework.transaction.annotation.Transactional public * 
+			(@org.springframework.stereotype.Service com.spring.data.service..*Service+).*(..))"
+			id="serviceTransactionalMethods" />
+
+		<aop:advisor advice-ref="cacheAdvice" pointcut-ref="serviceTransactionalMethods"
+			order="#{T(org.springframework.core.Ordered).HIGHEST_PRECEDENCE}" />
+	</aop:config>
+</beans>

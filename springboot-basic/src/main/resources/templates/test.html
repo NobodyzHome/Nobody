@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script type="text/javascript" th:inline="javascript" th:src="@{/jsLib/test.js}"></script>
+    <script type="text/javascript" th:inline="javascript">
+        var viewName = '[[|${view}123${students.size()}|]]';
+        alert(viewName);
+    </script>
+    <style type="text/css" th:inline="css">
+        div.btn {
+            font-size: [[ 2 *${students.size()} ]] pt;
+        }
+    </style>
+</head>
+<body>
+<!-- spring boot只会对th:前缀的属性中的${},#{}等符号进行解析和计算，对于没有th:前缀的属性，spring boot不会对其有计算操作 -->
+<!-- th:text就是用表达式的计算结果替换到元素体内。以下面这行来说，就是把${wawa}的计算结果替换到<p>内部 -->
+<p th:text="${wawa}"></p>
+<div th:object="${student}">
+    <p th:text="*{name}"></p>
+    <p th:text="*{age}"></p>
+    <p th:text="*{sex}"></p>
+    <p th:text="*{alias[0]}"></p>
+    <!-- 获取map属性中的某个key的值 -->
+    <p th:text="*{friendsNo['Mr-Zhang']}"></p>
+</div>
+
+<!-- 访问root对象，可以看到，root对象不是容器对象 -->
+<p th:text="${#root}"></p>
+<!-- 访问容器对象中的某个@bean实例 -->
+<p th:text="${@testController}"></p>
+<!-- 访问spring boot提供的#dates变量 -->
+<p th:text="${#dates.format(date)}"></p>
+<!-- 访问spring boot提供的#conversions变量 -->
+<p th:text="${#conversions.convert(T(org.apache.commons.lang3.time.DateUtils).addYears(new java.util.Date(),5),T(java.util.Date))}"></p>
+<!-- 访问spring boot提供的#strings变量 -->
+<p th:text="${#strings.append(#dates.format(date),'wahaha')}"></p>
+<!-- 访问spring boot提供的#locale变量 -->
+<p th:text="${#locale}"></p>
+<p th:text="*{(helloWorld?:'default hello').concat('!!!')}"></p>
+<p th:text="*{hello?.length()}"></p>
+<!--在#{}中不传参的情况-->
+<p th:text="#{welcome.mainPage.title}"></p>
+<!--在#{}中传参，也就是将参数传给对应MessageFormat的情况。注意：在#{}里也能用${}-->
+<p th:text="#{NotNull.java.lang.String(${'用户信息123'.concat(@testController.student.name).concat(view)})}"></p>
+<p th:text="#{welcome.mainPage.user('张三',${T(org.apache.commons.lang3.RandomUtils).nextInt(1,3000)},6500,0.78)}"></p>
+<img th:src="@{/images/1.png}"
+     th:title="${T(org.apache.commons.lang3.time.DateFormatUtils).format(new java.util.Date(),'yyyy-MM-dd')}"/>
+
+<p style="color:indianred">
+    使用th:replace来将当前元素替换成指定模版的元素，可以看到这里将< h1 >替换成了< div >。
+    注意：引用当前页面中的模版，可以使用this来代替模版文件的地址
+</p>
+<h1 th:replace="~{this::base}"></h1>
+
+<p style="color:indianred">不仅可以使用模版名称来指定模版，也可以使用选择器来获取指定的模版，这样，就可以不定义th:fragment属性了</p>
+<div th:replace="~{this::#baseFragment}"></div>
+
+<p style="color:indianred">如果使用th:insert，就是把模版中的内容插入到当前元素中，这里也就成了< p >< div >< /div >< p > </p>
+<p th:insert="~{this::base}"></p>
+
+<p style="color:indianred"> ~{::base}相当于~{this::base} </p>
+<span th:insert="~{::base}"></span>
+
+<p style="color:indianred">
+    1.如果~{}中没有选择器，也就是只有~{templateName}，那么就是把指定的文件中的内容都插入进来。<br/>
+    2.在~{}中使用@{}给出的模版文件的url，就直接是相对于模版根目录/templates/下的url，不是根据Controller的url来给出url
+</p>
+<form th:action="@{/basic/showDept}" th:insert="~{@{test/user}}">
+</form>
+
+<p style="color:indianred">
+    总结：~{}有三种格式：</br>
+    1.~{templateName::selector}，templateName是相对于/templates/下的路径，可以使用@{}来指出，如果访问当前页面的模版可以使用this指出；
+    selector是th:fragment中的名称，也可以是元素选择器。</br>
+    2.~{templateName}，将指定的模版文件的内容都引用过来</br>
+    3.~{::selector}，相当于~{this::selctor}</br>
+</p>
+<span th:insert="~{@{test/welcome} :: h1}"></span>
+
+<p>
+    在定义模版时，可以给模版增加参数，然后模版内部可以使用${}来使用参数。（例如：th:fragement="welcome(param1,param2)"）</br>
+    同时，在使用模版时，可以像~{test/user::welcome(param1,param2)}这样来传入参数。</br>
+</p>
+<div th:replace="~{@{test/user} :: welcome('李','先生',${T(java.text.DateFormat).getDateInstance().format(new java.util.Date())})}"></div>
+
+<p style="color:indianred">
+    注意：该< div >被加了th:fragment属性，说明这个< div >可以被作为一个片段来引用。但只要访问了该页面，这个< div >依然会被输出
+    ，不会因为有th:fragment属性就不输出这个< div >
+</p>
+<div th:fragment="base">
+    sdfsdf123
+</div>
+<div id="baseFragment">
+    xcvxvcxcv
+</div>
+<p th:text="|Welcome ${view}|">hello</p></br>
+<input type="checkbox" th:checked="${view.length()==4}"/></br>
+<input type="text" value="nice" name="txt" th:disabled="10 < 5"/></br>
+<input type="text" name="txt1" th:value="(true? 张三:李四) + ${view}"/></br>
+<span th:text="${view123}?:_">请输入用户：</span></br>
+<div th:text="'<b>Hello World</b>'"></div>
+<div th:utext="'<b>Hello World</b>'"></div>
+<div th:styleappend="|heigth:${20*20}px;border:solid ${1*2}px|" style="width:200px;"
+     th:text="'欢迎来到王者荣耀'+${new String('哈哈!')}"></div>
+<div th:styleappend="|width:${20*20}px;height:${15*20}px|" th:text="${view123}?:_" style="border: solid 1px;">娃哈哈</div>
+<p th:text="((20*20)-15>200?'张三':'李四') + 19 * 10 + '啦啦'"></p>
+<div class=" btn " th:attrappend="class=${view123}?'enable':'disable'">欢迎</div>
+<div class=" btn " th:attrprepend="class=${view123}?'enable':'disable'">啦啦</div>
+<p style="color:indianred">
+    在spel的语法中，条件判断中的表达式的值必须为boolean类型的。例如if(),三元表达式中的判断表达式的返回值都必须是boolean类型的。<br/>
+
+    但在thymeleaf的th:的语法中，条件判断则类似于js中的判断:<br/>
+    当表达式的值不为空（null）时<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;如果表达式的值是一个布尔类型 ， 且值为 false 评估为假 ， 否则为真；<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;如果表达式的值是一个数字类型 ， 且值为 0 评估为假 ， 否则为真；<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;如果表达式的值是一个字符类型 ， 且值为 0 评估为假 ， 否则为真；<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;如果表达式的值是一个字符串类型 ， 且值为 "false" 、 "off" 、 "no" 评估为假 ， 否则为真；<br/>
+    &nbsp;&nbsp;&nbsp;&nbsp;当表达式的值不为空，且不符合以上可能为假的情况，那评估结果就都是真。也就是说，当表达式不为空时，只有以上情况评估为假，其余都为真；<br/>
+    当表达式的值为空（null）时 ， 评估结果为假<br/>
+</p>
+<p th:text="'no'?'123':'456'"></p>
+
+<p style="color:indianred">
+    在使用th:each遍历时，会为遍历的变量创建一个额外的变量，这个变量以Stat结尾。这个变量代表当前遍历的这个元素的状态，包括索引位置、是否是奇数位置、是否是偶数位置等等。<br/>
+    例如：th:each="student : ${students}"，用于遍历的变量是student，那么会同时创建一个名为studentStat的变量，使用studentStat.index获取索引位置，
+    使用studentStat.count获取计数（从1开始），使用studentStat.odd判断当前遍历的元素的位置（从1开始）是否为奇数。<br/>
+</p>
+<ul>
+    <!-- 注意：th:不仅可以对已有属性进行计算，还可以对自定义的属性进行计算，例如可以对th:pos这个自定义属性进行计算 -->
+    <li th:each="student : ${students}" th:pos="${studentStat.index}"
+        th:text="|${student.name}(${studentStat.count}/${studentStat.size} ${studentStat.odd?'奇数队':'偶数队'})|"></li>
+</ul>
+<select name="student">
+    <option th:each="student : ${students}" th:text="|${student.name}(${studentStat.count}/${studentStat.size})|"
+            th:value="${student.id}"
+            th:selected="${studentStat.last}"></option>
+</select>
+
+<p style="color:indianred">当没有view123这个变量时，会给元素体里赋空值。例如：< p >< /p ></p>
+<p th:text="${view123}">haha</p>
+
+<p style="color:indianred">如果th:if的表达式返回false，则不会输出这个元素</p>
+<h5 th:if="${students123}" th:each="student : ${students}" th:text="${student.name+','+student.age}"></h5>
+
+<p style="color:indianred">如果th:unless的表达式返回false，则会输出这个元素</p>
+<table th:unless="${students123}">
+    <tr>
+        <td>序号</td>
+        <td>姓名</td>
+        <td>年龄</td>
+    </tr>
+    <tr th:each="student : ${students}">
+        <td th:text="${studentStat.count}"></td>
+        <td th:text="${student.name}"></td>
+        <td th:text="${student.age}?:_">未知</td>
+    </tr>
+</table>
+<div th:style="'width:'+(5*30)+'px;height:'+(10*10)+'px;border:solid 1px'" th:switch="${user}"
+     th:unless="${students.size()>20}">
+    <p th:case="zhangsan">张三</p>
+    <p th:case="lisi">李四</p>
+    <p th:case="wangwu">王五</p>
+</div>
+
+<p style="color:indianred">
+    th:assert中可以提供多个表达式，只有所有表达式都返回true才能通过，否则会抛出异常
+</p>
+<div th:assert="10 > 5,${students},'welcome'"></div>
+
+<p th:with="viewName=${view},count=20+30,size=${students.size()} + 5">
+    <span th:text="|${viewName} & ${count} & ${size}|"></span>
+</p>
+
+<p th:inline="none" style="color:indianred">[[]]写在元素的属性里无效，写在元素体里有效</p>
+<div><b>Message is : [[|${view}123${students.size()}|]]</b></div>
+<div th:inline="text">
+    [# th:each="student : ${students}"]
+    [[|${student.name}(${studentStat.count}/${studentStat.size})|]]
+    [[${student.age}?:年龄未知]]
+    [/]
+    </br>
+    [# th:if="${students}"]
+    有数据[[${T(java.text.DateFormat).getDateTimeInstance().format(new java.util.Date())}]]
+    [/]
+    [[${htmlContents}]]
+    [(${htmlContents})]
+</div>
+</body>
+</html>

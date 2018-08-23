@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE  mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "../../schema/mybatis/mybatis-3-mapper.dtd">
+<mapper namespace="com.spring.data.dao.BasicMapper">
+	<select id="callFunction" statementType="CALLABLE">
+		{#{interval,mode=OUT,jdbcType=INTEGER,javaType=int} = call
+		timestamp_cha(#{startTime},#{endTime})}
+	</select>
+</mapper>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hibernate-mapping xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://www.hibernate.org/xsd/orm/hbm"
+	xsi:schemaLocation="http://www.hibernate.org/xsd/orm/hbm ../../schema/hibernate/legacy-mapping-4.0.xsd"
+	package="com.spring.data.domain">
+
+	<class name="BaseLine" table="base_line">
+		<cache usage="nonstrict-read-write" region="line" />
+
+		<id name="lineNo" column="line_no">
+			<generator class="sequence">
+				<param name="sequence_name">SEQ_BASE_LINE</param>
+			</generator>
+		</id>
+
+		<property name="lineCode" column="line_code" />
+		<property name="lineName" column="line_name" />
+		<property name="isRun" column="is_run" />
+		<property name="modifyDate" column="modify_time" />
+
+		<!-- <many-to-one name="dept" column="dept_no" cascade="save-update" -->
+		<!-- lazy="false" /> -->
+	</class>
+</hibernate-mapping>

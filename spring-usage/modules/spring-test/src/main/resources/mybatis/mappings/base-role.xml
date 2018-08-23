@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE  mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "../../schema/mybatis/mybatis-3-mapper.dtd">
+<mapper namespace="com.spring.data.dao.BaseRoleMapper">
+	<select id="queryRoles" resultMap="role">
+		select * from base_role
+		<where>
+			<if test="@java.util.Objects@nonNull(roleNoArray)">
+				and role_no in
+				<foreach collection="roleNoArray" item="role" open="("
+					close=")" separator=",">
+					#{role}
+				</foreach>
+			</if>
+			<if test="@java.util.Objects@nonNull(roleNo)">
+				and role_no = #{roleNo}
+			</if>
+		</where>
+	</select>
+
+	<resultMap type="BaseRole" id="role">
+		<constructor>
+			<idArg javaType="integer" column="role_no" />
+			<arg javaType="string" column="role_name" />
+		</constructor>
+
+		<result property="description" column="description" />
+		<result property="active" column="active" />
+		<result property="modifyDate" column="modify_date" />
+		<result property="roleGroupNo" column="role_group_no" />
+		<result property="lineGroupNo" column="line_group_no" />
+	</resultMap>
+</mapper>

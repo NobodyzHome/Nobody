@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:p="http://www.springframework.org/schema/p" xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd">
+
+	<context:property-placeholder location="classpath:database/*.properties" />
+
+	<bean id="abstractDataSource" abstract="true"
+		class="org.apache.commons.dbcp2.BasicDataSource" p:initialSize="${datasource.default.initialSize}"
+		p:maxTotal="${datasource.default.maxTotal}" p:minIdle="${datasource.default.minIdle}"
+		p:maxIdle="${datasource.default.maxIdle}" p:maxConnLifetimeMillis="${datasource.default.maxConnLifetimeMillis}"
+		p:defaultQueryTimeout="${datasource.default.defaultQueryTimeout}"
+		p:maxWaitMillis="${datasource.default.maxWaitMillis}" />
+
+	<beans profile="jiayuguan,default,!test">
+		<bean id="dataSource" parent="abstractDataSource" p:url="${db.jiayuguan.url}"
+			p:driverClassName="${db.jiayuguan.driverClassName}" p:username="${db.jiayuguan.username}"
+			p:password="${db.jiayuguan.password}" destroy-method="close" />
+	</beans>
+
+	<beans profile="test196,test">
+		<bean id="dataSource" parent="abstractDataSource" p:url="${db.test.196.url}"
+			p:driverClassName="${db.test.196.driverClassName}" p:username="${db.test.196.username}"
+			p:password="${db.test.196.password}" destroy-method="close" />
+	</beans>
+</beans>

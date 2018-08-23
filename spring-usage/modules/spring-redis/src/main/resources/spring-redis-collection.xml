@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:p="http://www.springframework.org/schema/p" xmlns:redis="http://www.springframework.org/schema/redis"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/redis http://www.springframework.org/schema/redis/spring-redis-1.0.xsd">
+
+	<bean id="redisConnectionFactory"
+		class="com.spring.redis.registration.RedisConnectionFactoryBean"
+		p:hostname="localhost" p:port="63790" p:dbIndex="0" p:minIdle="5"
+		p:maxIdle="8" p:maxTotal="20" p:maxWaitSeconds="60"
+		p:minEvictableSeconds="120" p:usePool="true" />
+
+	<bean id="stringSerializer"
+		class="org.springframework.data.redis.serializer.StringRedisSerializer" />
+
+	<bean id="jacksonSerializer"
+		class="org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer" />
+
+	<bean id="jdkSerializer"
+		class="org.springframework.data.redis.serializer.JdkSerializationRedisSerializer" />
+
+	<bean id="redisTemplate" class="org.springframework.data.redis.core.RedisTemplate"
+		p:keySerializer-ref="stringSerializer" p:valueSerializer-ref="jacksonSerializer"
+		p:hashKeySerializer-ref="stringSerializer" p:hashValueSerializer-ref="jdkSerializer"
+		p:connectionFactory-ref="redisConnectionFactory" />
+
+	<bean id="stringRedisTemplate" class="org.springframework.data.redis.core.StringRedisTemplate"
+		c:connectionFactory-ref="redisConnectionFactory" />
+
+	<bean id="redisList"
+		class="org.springframework.data.redis.support.collections.DefaultRedisList"
+		c:key="tmp-list" c:operations-ref="redisTemplate" />
+
+	<bean id="redisSet"
+		class="org.springframework.data.redis.support.collections.DefaultRedisSet"
+		c:key="tmp-set" c:operations-ref="redisTemplate" />
+
+	<redis:collection id="redisZSet" type="ZSET" key="tmp-zset"
+		template="redisTemplate" />
+
+	<redis:collection id="redisMap" type="MAP" key="tmp-map"
+		template="redisTemplate" />
+
+	<redis:collection id="redisProperties" type="PROPERTIES"
+		key="tmp-properties" template="stringRedisTemplate" />
+</beans>

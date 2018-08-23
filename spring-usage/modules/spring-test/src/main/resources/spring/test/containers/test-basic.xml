@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:c="http://www.springframework.org/schema/c" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring-1.2.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.3.xsd">
+
+	<context:property-placeholder location="classpath:database/**/*.properties"
+		ignore-resource-not-found="true" ignore-unresolvable="false"
+		file-encoding="UTF-8" />
+
+	<bean id="abstractDataSource" abstract="true"
+		class="org.apache.commons.dbcp2.BasicDataSource" p:initialSize="${datasource.default.initialSize}"
+		p:maxTotal="${datasource.default.maxTotal}" p:minIdle="${datasource.default.minIdle}"
+		p:maxIdle="${datasource.default.maxIdle}" p:maxConnLifetimeMillis="${datasource.default.maxConnLifetimeMillis}"
+		p:defaultQueryTimeout="${datasource.default.defaultQueryTimeout}"
+		p:maxWaitMillis="${datasource.default.maxWaitMillis}" />
+
+	<bean id="sessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean"
+		p:dataSource-ref="dataSource" p:configLocation="classpath:mybatis/mybatis-configuration.xml"
+		p:mapperLocations="classpath:mybatis/mappings/**/*.xml" />
+
+	<mybatis-spring:scan base-package="com.spring.data.dao" />
+
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager"
+		p:dataSource-ref="dataSource" />
+
+	<tx:annotation-driven transaction-manager="transactionManager" />
+
+	<bean id="conversionService"
+		class="org.springframework.format.support.FormattingConversionServiceFactoryBean">
+		<property name="registerDefaultFormatters" value="true" />
+		<property name="formatters">
+			<bean class="org.springframework.format.datetime.DateFormatter"
+				p:pattern="yyyy-MM-dd kk:mm:ss" />
+		</property>
+	</bean>
+
+	<util:list id="list">
+		<bean class="java.lang.String" c:original="张三" />
+		<bean class="java.lang.String" c:original="李四" />
+		<bean class="java.lang.String" c:original="王五" />
+	</util:list>
+
+	<beans profile="jiayuguan">
+		<bean id="dataSource" parent="abstractDataSource" p:url="${db.jiayuguan.url}"
+			p:driverClassName="${db.jiayuguan.driverClassName}" p:username="${db.jiayuguan.username}"
+			p:password="${db.jiayuguan.password}" destroy-method="close" />
+	</beans>
+
+	<beans profile="test">
+		<bean id="dataSource" parent="abstractDataSource" p:url="${db.test.196.url}"
+			p:driverClassName="${db.test.196.driverClassName}" p:username="${db.test.196.username}"
+			p:password="${db.test.196.password}" destroy-method="close" />
+	</beans>
+</beans>

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:cache="http://www.springframework.org/schema/cache"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:oxm="http://www.springframework.org/schema/oxm"
+	xsi:schemaLocation="http://www.springframework.org/schema/oxm http://www.springframework.org/schema/oxm/spring-oxm-4.3.xsd
+		http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache-4.3.xsd
+		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.3.xsd">
+
+	<bean id="random" class="java.lang.Integer"
+		c:value="#{T(org.apache.commons.lang3.RandomUtils).nextInt(200,300)}" />
+
+	<bean id="concurrentCachaManager"
+		class="org.springframework.cache.concurrent.ConcurrentMapCacheManager"
+		c:cacheNames="hello,world" />
+
+	<bean id="ehCacheManager" class="org.springframework.cache.ehcache.EhCacheCacheManager">
+		<property name="cacheManager">
+			<bean class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean"
+				p:acceptExisting="true" p:configLocation="classpath:ehcache/ehcache.xml" />
+		</property>
+	</bean>
+
+	<bean id="ehCacheResolver"
+		class="org.springframework.cache.interceptor.NamedCacheResolver"
+		c:cacheManager-ref="ehCacheManager" c:cacheNames="region1,region2" />
+
+	<cache:annotation-driven cache-manager="ehCacheManager"
+		order="-10" />
+	<tx:annotation-driven order="-5" />
+
+	<aop:config expose-proxy="true" />
+
+	<bean id="baseLineTeamService" class="com.spring.data.service.BaseLineTeamService" />
+	<bean id="baseDeptService" class="com.spring.data.service.BaseDeptService" />
+
+	<bean id="threadPoolExecutor"
+		class="org.springframework.scheduling.concurrent.ThreadPoolExecutorFactoryBean"
+		p:allowCoreThreadTimeOut="false" p:corePoolSize="5" p:maxPoolSize="10"
+		p:queueCapacity="50"
+		p:rejectedExecutionHandler="#{new java.util.concurrent.ThreadPoolExecutor.DiscardOldestPolicy()}"
+		p:keepAliveSeconds="120" p:threadGroupName="gp" p:threadNamePrefix="gp-thread-pool-"
+		p:threadPriority="#{T(org.apache.commons.lang3.RandomUtils).nextInt(T(java.lang.Thread).NORM_PRIORITY,T(java.lang.Thread).MAX_PRIORITY)}"
+		p:waitForTasksToCompleteOnShutdown="true" p:awaitTerminationSeconds="300" />
+
+	<bean id="concurrentTaskExecutor"
+		class="org.springframework.scheduling.concurrent.ConcurrentTaskExecutor"
+		c:concurrentExecutor-ref="threadPoolExecutor" />
+
+	<bean id="syncTaskExecutor" class="org.springframework.core.task.SyncTaskExecutor" />
+
+	<bean id="simpleAsyncTaskExecutor" class="org.springframework.core.task.SimpleAsyncTaskExecutor"
+		p:threadNamePrefix="td-" p:threadGroupName="gp" p:concurrencyLimit="50"
+		p:daemon="false" p:threadPriority="6" />
+
+	<bean id="threadPoolTaskExecutor"
+		class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor"
+		p:corePoolSize="10" p:maxPoolSize="50" p:queueCapacity="5"
+		p:keepAliveSeconds="360" p:allowCoreThreadTimeOut="true"
+		p:awaitTerminationSeconds="600" p:waitForTasksToCompleteOnShutdown="true" />
+
+	<task:executor id="taskExecutor" keep-alive="180"
+		pool-size="10-50" queue-capacity="15" rejection-policy="CALLER_RUNS" />
+
+	<bean id="scheduledThreadPoolExecutor"
+		class="org.springframework.scheduling.concurrent.ScheduledExecutorFactoryBean"
+		p:poolSize="20" p:threadNamePrefix="scheduled-thread-"
+		p:threadGroupName="scheduled" p:waitForTasksToCompleteOnShutdown="true"
+		p:awaitTerminationSeconds="120" />
+
+	<bean id="concurrentTaskScheduler"
+		class="org.springframework.scheduling.concurrent.ConcurrentTaskScheduler"
+		p:scheduledExecutor-ref="scheduledThreadPoolExecutor" />
+
+	<bean id="threadPoolTaskScheduler"
+		class="org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler"
+		p:poolSize="5" p:threadNamePrefix="scheduled-" p:threadPriority="1"
+		p:daemon="false" p:waitForTasksToCompleteOnShutdown="false" />
+
+	<task:scheduler id="taskScheduler" pool-size="50" />
+
+	<task:annotation-driven executor="threadPoolTaskExecutor"
+		scheduler="concurrentTaskScheduler" />
+
+	<task:scheduled-tasks scheduler="threadPoolTaskScheduler">
+		<task:scheduled ref="baseLineTeamService" method="testScheduled1"
+			fixed-rate="2000" />
+	</task:scheduled-tasks>
+</beans>

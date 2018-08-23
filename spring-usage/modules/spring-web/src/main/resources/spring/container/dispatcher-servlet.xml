@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:mvc="http://www.springframework.org/schema/mvc" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:cache="http://www.springframework.org/schema/cache" xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache-4.3.xsd
+		http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.3.xsd
+		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.3.xsd">
+
+	<context:component-scan base-package="com.spring.web.controller" />
+
+	<mvc:annotation-driven conversion-service="conversionService"
+		content-negotiation-manager="contentNegotiationManager" validator="validator">
+		<mvc:message-converters register-defaults="true">
+			<bean
+				class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter"
+				p:prettyPrint="true" />
+			<bean
+				class="org.springframework.http.converter.xml.MappingJackson2XmlHttpMessageConverter"
+				p:prettyPrint="true" />
+			<bean
+				class="org.springframework.http.converter.ObjectToStringHttpMessageConverter"
+				c:conversionService-ref="conversionService" />
+			<bean class="org.springframework.http.converter.StringHttpMessageConverter"
+				p:defaultCharset="#{T(java.nio.charset.Charset).defaultCharset()}" />
+		</mvc:message-converters>
+	</mvc:annotation-driven>
+
+	<bean id="conversionService"
+		class="org.springframework.format.support.FormattingConversionServiceFactoryBean"
+		p:registerDefaultFormatters="true" />
+
+	<bean id="contentNegotiationManager"
+		class="org.springframework.web.accept.ContentNegotiationManagerFactoryBean">
+		<property name="mediaTypes">
+			<value>
+				json=application/json
+				xml=application/xml
+				htm=text/html
+				html=text/html
+				txt=text/plain
+			</value>
+		</property>
+
+		<property name="favorParameter" value="true" />
+		<property name="parameterName" value="format" />
+		<property name="favorPathExtension" value="true" />
+		<property name="ignoreAcceptHeader" value="true" />
+		<property name="defaultContentType" value="text/html" />
+	</bean>
+
+	<mvc:resources location="WEB-INF/images/" mapping="/images/**" />
+	<mvc:resources location="WEB-INF/scripts/" mapping="/scripts/**" />
+	<mvc:resources location="WEB-INF/styles/" mapping="/styles/**" />
+	<mvc:resources location="WEB-INF/,classpath:,file:///Users/maziqiang/Downloads/"
+		mapping="/secrit/**" />
+
+	<mvc:view-resolvers>
+		<mvc:content-negotiation use-not-acceptable="true">
+			<mvc:default-views>
+				<bean
+					class="org.springframework.web.servlet.view.json.MappingJackson2JsonView" />
+				<bean
+					class="org.springframework.web.servlet.view.xml.MappingJackson2XmlView" />
+			</mvc:default-views>
+		</mvc:content-negotiation>
+
+		<mvc:bean-name />
+
+		<bean
+			class="org.springframework.web.servlet.view.ResourceBundleViewResolver"
+			p:basename="spring/views/view" />
+
+		<bean class="org.springframework.web.servlet.view.XmlViewResolver"
+			p:location="classpath:spring/views/view-config.xml" />
+
+		<!-- 如果要访问/WEB-INF/下的jsp文件，那么一个很重要的限制是，当前DispatcherServlet对应的<url-pattern>可以是"/"，也可以是"/dispatcher/*","/hello/*"等， 
+			但不能是"/*"，否则会报404错误。 -->
+		<mvc:jsp prefix="/WEB-INF/pages/" suffix=".jsp" />
+	</mvc:view-resolvers>
+
+	<bean id="welcome"
+		class="org.springframework.web.servlet.view.InternalResourceView"
+		p:url="/WEB-INF/pages/welcome.jsp" />
+
+	<mvc:view-controller path="/test/**" />
+	<mvc:view-controller path="/theme/**" />
+	<mvc:view-controller path="/upload*" />
+
+	<bean id="localeResolver"
+		class="org.springframework.web.servlet.i18n.SessionLocaleResolver"
+		p:localeAttributeName="locale" />
+
+	<mvc:interceptors>
+		<bean class="org.springframework.web.servlet.i18n.LocaleChangeInterceptor"
+			p:paramName="locale" />
+
+		<mvc:interceptor>
+			<mvc:mapping path="/theme/**" />
+			<mvc:exclude-mapping path="/theme/none/**" />
+			<bean class="org.springframework.web.servlet.theme.ThemeChangeInterceptor"
+				p:paramName="theme" />
+		</mvc:interceptor>
+	</mvc:interceptors>
+
+	<bean id="messageSource"
+		class="org.springframework.context.support.ResourceBundleMessageSource"
+		p:defaultEncoding="UTF-8"
+		p:basenames="i18n/validation/error,i18n/validation/field,i18n/validation/message"
+		p:useCodeAsDefaultMessage="false" />
+
+	<bean id="validator"
+		class="org.springframework.validation.beanvalidation.OptionalValidatorFactoryBean"
+		p:validationMessageSource-ref="messageSource" />
+
+	<bean id="controllerLogger" class="com.spring.aop.log.ControllerMethodLogger" />
+
+	<aop:config expose-proxy="true">
+		<aop:pointcut
+			expression="execution(@org.springframework.web.bind.annotation.*Mapping
+			public * (@(org.springframework.stereotype.Controller || org.springframework.web.bind.annotation.RestController) 
+			com.spring.web.controller..*Controller+).*(..))"
+			id="controlerMethods" />
+
+		<aop:aspect ref="controllerLogger" order="1">
+			<aop:after-returning method="logReturningOperation"
+				pointcut-ref="controlerMethods" returning="result" arg-names="result" />
+			<aop:after-throwing method="logThrowingOperation"
+				throwing="ex" pointcut-ref="controlerMethods" arg-names="ex" />
+			<aop:around method="logArround" pointcut-ref="controlerMethods" />
+			<aop:before method="logBeforeOperation" pointcut-ref="controlerMethods" />
+			<aop:after method="logAfterOperation" pointcut-ref="controlerMethods" />
+		</aop:aspect>
+	</aop:config>
+
+	<bean class="com.spring.aop.log.AnnotationControllerMethodLogger" />
+	<aop:aspectj-autoproxy expose-proxy="true" />
+
+	<bean id="themeResolver"
+		class="org.springframework.web.servlet.theme.CookieThemeResolver"
+		p:cookieName="theme" />
+
+	<bean id="themeSource"
+		class="org.springframework.ui.context.support.ResourceBundleThemeSource"
+		p:basenamePrefix="spring/themes/" p:defaultEncoding="UTF-8" />
+
+	<bean id="multipartResolver"
+		class="org.springframework.web.multipart.support.StandardServletMultipartResolver" />
+
+	<mvc:default-servlet-handler />
+
+	<cache:annotation-driven cache-manager="ehCacheManager" />
+	
+</beans>

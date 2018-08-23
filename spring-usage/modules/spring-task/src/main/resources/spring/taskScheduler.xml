@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd">
+
+	<!-- 创建一个jdk5的ScheduledThreadPoolExecutor对象。 -->
+	<!-- ScheduledExecutorFactoryBean继承自ExecutorConfigurationSupport，实现了ThreadFactory接口。因此，ScheduledExecutorFactoryBean所 
+		创建的ScheduledThreadPoolExecutor，实际上是使用ScheduledExecutorFactoryBean对象来创建线程。 -->
+	<bean id="scheduledThreadPoolExecutor"
+		class="org.springframework.scheduling.concurrent.ScheduledExecutorFactoryBean"
+		p:daemon="false" p:poolSize="5" p:removeOnCancelPolicy="true"
+		p:threadNamePrefix="scheduled" />
+
+	<!-- 创建一个ConcurrentTaskScheduler。和ConcurrentTaskExecutor类似，ConcurrentTaskScheduler是委派聚合在其中的ScheduledExecutorService， 
+		由其来执行任务。 -->
+	<bean id="concurrentTaskScheduler"
+		class="org.springframework.scheduling.concurrent.ConcurrentTaskScheduler">
+		<property name="scheduledExecutor">
+			<bean
+				class="org.springframework.scheduling.concurrent.ScheduledExecutorFactoryBean"
+				p:daemon="false" p:poolSize="9" p:removeOnCancelPolicy="true"
+				p:threadNamePrefix="scheduled-" p:threadPriority="3"
+				p:rejectedExecutionHandler="#{new java.util.concurrent.ThreadPoolExecutor.AbortPolicy()}"
+				p:threadGroupName="gp" />
+		</property>
+	</bean>
+
+	<!-- 创建一个spring的ThreadPoolTaskScheduler对象。ThreadPoolTaskScheduler类提供了多个用于配置ScheduledThreadPoolExecutor的属性。 
+		ThreadPoolTaskScheduler在实际执行任务时会使用这些配置来创建一个ScheduledThreadPoolExecutor，使用它来执行提交的任务。 -->
+	<!-- 另外，ThreadPoolTaskScheduler也继承自ExecutorConfigurationSupport，实现了ThreadFactory接口。因此，ThreadPoolTaskScheduler所创建 
+		的ScheduledThreadPoolExecutor对象，是使用ThreadPoolTaskScheduler对象来创建线程。 -->
+	<bean id="taskScheduler"
+		class="org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler"
+		p:daemon="false" p:poolSize="10" p:threadNamePrefix="test"
+		p:threadGroupName="gp" />
+
+	<!-- 使用快捷方式创建一个spring的ThreadPoolTaskScheduler -->
+	<task:scheduler id="taskScheduler1" pool-size="8" />
+
+	<bean id="taskSchedulerService" class="com.spring.task.service.TaskSchedulerService" />
+
+	<!-- 所谓各个系列的annotation-driven配置，其实质是让容器能够识别<bean>中的方法对应的注解，然后为这个<bean>创建代理类对象，并且在对应的注解的方法 
+		的责任链对象上增加通知对象。例如：cache:annotation-driven是在@CacheX系列的注解的方法的责任链对象上增加CacheIntercetpor对象等等。 
+		因此，每一个系列的annotation-driven能识别的注解是不同的，例如tx:annotation-driven识别的是@Transactional注解，cache: 
+		annotation-driven识别的是@CacheX系列注解，task:annotation-driven识别的是@Async和@Scheduled注解。 -->
+	<!-- scheduler属性可以是jdk5的ScheduledExecutorService，也可以是spring的TaskScheduler的实例 -->
+	<!-- Specifies the org.springframework.scheduling.TaskScheduler or java.util.ScheduledExecutorService 
+		instance to use when invoking scheduled methods. -->
+	<task:annotation-driven scheduler="concurrentTaskScheduler" />
+
+	<!-- 配置一个定时执行任务 -->
+	<!-- 可以在类的方法上增加@Scheduled注解来支持定时任务执行。如果无法修改那个类，又需要定时执行那个类的实例的方法，则可以使用scheduled-tasks 
+		标签来在类的外部配置定时执行的任务。 -->
+	<task:scheduled-tasks>
+		<task:scheduled ref="taskSchedulerService" method="method3"
+			fixed-rate="5000" />
+	</task:scheduled-tasks>
+</beans>

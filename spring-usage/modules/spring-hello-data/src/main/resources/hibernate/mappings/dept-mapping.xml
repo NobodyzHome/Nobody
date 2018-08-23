@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<hibernate-mapping xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://www.hibernate.org/xsd/orm/hbm"
+	xsi:schemaLocation="http://www.hibernate.org/xsd/orm/hbm ../../schema/hibernate/legacy-mapping-4.0.xsd"
+	package="com.spring.data.domain">
+	<class name="BaseDept" table="base_dept">
+		<id name="deptNo" column="dept_no">
+			<generator class="sequence">
+				<param name="sequence_name">SEQ_BASE_DEPT</param>
+			</generator>
+		</id>
+
+		<property name="deptCode" column="dept_code" />
+		<property name="deptName" column="dept_name" />
+		<property name="isRun" column="is_run" />
+		<property name="modifyDate" column="modify_date" />
+		<property name="deptLevel" column="dept_level" />
+
+		<many-to-one name="parent" column="parent_dept_no"
+			cascade="save-update" lazy="false" />
+
+		<set name="lineSet" inverse="true" cascade="none" lazy="false">
+			<key column="dept_no" />
+			<one-to-many class="BaseLine" />
+		</set>
+	</class>
+</hibernate-mapping>

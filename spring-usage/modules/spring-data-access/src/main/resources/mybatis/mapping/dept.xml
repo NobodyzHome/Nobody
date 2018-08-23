@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE  mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "../../schema/mybatis/mybatis-3-mapper.dtd">
+<mapper namespace="com.spring.data.dao.mybatis.BaseDeptMapper">
+	<sql id="dynamicColumn">
+		<choose>
+			<when test="columns instanceof java.util.Map">
+				<foreach collection="columns" index="columnName" item="columnAlias"
+					separator=",">
+					${columnName} ${columnAlias}
+				</foreach>
+			</when>
+			<when
+				test="columns.getClass().isArray() or columns instanceof java.util.Collection">
+				<foreach collection="columns" item="columnName" separator=",">
+					${columnName}
+				</foreach>
+			</when>
+		</choose>
+	</sql>
+
+	<sql id="dynamicCondition">
+		<if test="@java.util.Objects@nonNull(conditionMap)">
+			<trim prefixOverrides="and|or" suffixOverrides=",|;">
+				<foreach collection="conditionMap" index="columnName" item="conditionValue">
+					<if test="@java.util.Objects@nonNull(conditionValue)">
+						and
+						<choose>
+							<when test="conditionValue.getClass().isArray()">
+								${columnName} in
+								<foreach collection="conditionValue" item="condition"
+									open="(" close=")" separator=",">
+									#{condition}
+								</foreach>
+							</when>
+							<when test="conditionValue instanceof java.util.Date">
+								trunc(${columnName}) = trunc(#{conditionValue})
+							</when>
+							<when test="conditionValue instanceof String">
+								${columnName} like #{conditionValue}
+							</when>
+							<otherwise>
+								${columnName} = #{conditionValue}
+							</otherwise>
+						</choose>
+					</if>
+				</foreach>
+			</trim>
+		</if>
+	</sql>
+
+	<sql id="querySingleTableTemplate">
+		select
+		<include refid="dynamicColumn" />
+		from ${tableToQuery}
+		<where>
+			<include refid="dynamicCondition" />
+		</where>
+	</sql>
+
+	<select id="queryDept" resultMap="dept">
+		<bind name="columns"
+			value="new String[]{'dept_no','dept_code','dept_name','modify_date','is_run'}" />
+		<bind name="conditionMap"
+			value="#@java.util.HashMap@{'dept_no':deptNo,'dept_code':deptCode,'dept_name':deptName,'modify_date':modifyDate,'is_run':isRun}" />
+
+		<include refid="querySingleTableTemplate">
+			<property name="tableToQuery" value="base_dept" />
+		</include>
+	</select>
+
+	<resultMap type="BaseDept" id="dept">
+		<constructor>
+			<idArg column="dept_no" javaType="int" />
+			<arg column="dept_code" javaType="String" />
+		</constructor>
+
+		<result property="deptName" column="dept_name" />
+		<result property="modifyDate" column="modify_date" />
+		<result property="isRun" column="is_run" />
+	</resultMap>
+
+	<select id="queryDeptId" resultType="int">
+		select seq_base_dept.nextval
+		from dual
+	</select>
+
+	<insert id="insertDept">
+		<bind name="insertMap"
+			value="#@java.util.HashMap@{'dept_no':deptNo,'dept_code':deptCode,'dept_name':deptName,'modify_date':modifyDate,'is_run':isRun}" />
+
+		insert into base_dept
+		<foreach collection="insertMap.keySet()" item="columnName"
+			open="(" close=")" separator=",">
+			${columnName}
+		</foreach>
+		values
+		<foreach collection="insertMap.values()" item="conditionValue"
+			open="(" close=")" separator=",">
+			#{conditionValue}
+		</foreach>
+	</insert>
+
+	<update id="updateDept">
+		<bind name="updateMap"
+			value="#{'dept_no':dept.deptNo,'dept_code':dept.deptCode,'dept_name':dept.deptName,'modify_date':dept.modifyDate,'is_run':dept.isRun}" />
+		<bind name="conditionMap"
+			value="#{'dept_no':condition.deptNo,'dept_code':condition.deptCode,'dept_name':condition.deptName,'modify_date':condition.modifyDate
+			,'is_run':condition.isRun}" />
+
+		update base_dept
+		<set>
+			<foreach collection="updateMap" index="columnName" item="updateValue"
+				separator=",">
+				<if test="@java.util.Objects@nonNull(updateValue)">
+					${columnName} = #{updateValue}
+				</if>
+			</foreach>
+		</set>
+		<where>
+			<include refid="dynamicCondition" />
+		</where>
+	</update>
+
+	<delete id="deleteDept">
+		<bind name="conditionMap"
+			value="#@java.util.HashMap@{'dept_no':deptNo,'dept_code':deptCode,'dept_name':deptName,'modify_date':modifyDate,'is_run':isRun}" />
+
+		delete from base_dept
+		<where>
+			<include refid="dynamicCondition" />
+		</where>
+	</delete>
+</mapper>

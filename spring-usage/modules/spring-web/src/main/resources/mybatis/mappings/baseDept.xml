@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE  mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "../../schema/mybatis/mybatis-3-mapper.dtd">
+<mapper namespace="com.spring.data.mapper.BaseDeptMapper">
+	<select id="queryDept" resultMap="deptWithParent">
+		<bind name="columns"
+			value="#{'dept_no':'dept_no','dept_name':'dept_name','dept_code':'dept_code','modify_date':'modify_date','is_run':'is_run'}" />
+		<bind name="conditionMap"
+			value="#@java.util.HashMap@{'dept_no':deptNo,'dept_code':deptCode,'dept_name':deptName,'is_run':isRun}" />
+
+		<include refid="mybatis.mappings.dynamicSql.queryTemplate">
+			<property name="tableToQuery" value="base_dept" />
+		</include>
+	</select>
+
+	<resultMap type="BaseDept" id="dept">
+		<constructor>
+			<idArg javaType="integer" column="dept_no" />
+			<arg javaType="string" column="dept_code" />
+		</constructor>
+
+		<result property="deptName" column="dept_name" />
+		<result property="modifyDate" column="modify_date" />
+		<result property="isRun" column="is_run" />
+	</resultMap>
+
+	<resultMap type="BaseDept" id="deptWithParent" extends="dept">
+		<association property="parentDept" select="queryDept"
+			column="{dept_no=parent_dept_no}" />
+	</resultMap>
+
+	<select id="timeCha" statementType="CALLABLE">
+		{#{interval,mode=OUT,jdbcType=INTEGER,javaType=integer} = call
+		timestamp_cha(#{startTime},#{endTime})}
+	</select>
+
+	<select id="timeCha1" resultType="integer">
+		select
+		timestamp_cha(#{startTime},#{endTime}) from dual
+	</select>
+</mapper>

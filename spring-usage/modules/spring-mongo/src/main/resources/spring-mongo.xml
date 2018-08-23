@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:mongo="http://www.springframework.org/schema/data/mongo" xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:task="http://www.springframework.org/schema/task"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/data/mongo http://www.springframework.org/schema/data/mongo/spring-mongo.xsd http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task.xsd">
+
+    <!-- 1.配置数据源连接池 -->
+    <!--
+        host:
+            The host to connect to a MongoDB server.  Default is localhost
+        port:
+            The port to connect to MongoDB server.  Default is 27017
+    -->
+    <mongo:mongo-client id="mongoDataSource" host="localhost" port="" replica-set="">
+        <!--
+            connect-timeout:
+                The connect timeout in milliseconds. 0 is default and infinite.
+            description
+                The MongoClient description.
+            min-connections-per-host
+                The minimum number of connections per host.相当于最小连接数。
+            connections-per-host
+                The number of connections allowed per host.  Will block if run out.	 Default is 100.
+            threads-allowed-to-block-for-connection-multiplier:
+                The multiplier for connectionsPerHost for # of threads that can block.  Default is 5.
+                If connectionsPerHost is 10, and threadsAllowedToBlockForConnectionMultiplier is 5,
+                then 50 threads can block more than that and an exception will be thrown.
+                一个用于乘以connectionsPerHost的乘积，如果当前属性为5，connectionsPerHost为10，那么当等待获取连接的被阻塞的线程超过
+                50时，所有被阻塞的线程都会接收到异常。这样这些线程就不会继续等待获取连接了。
+            max-wait-time
+                The max wait time of a blocking thread for a connection. Default is 120000 ms (2 minutes).
+            max-connection-idle-time
+                The maximum idle time for a pooled connection.
+            connections-per-host
+                The number of connections allowed per host.  Will block if run out.	 Default is 100.相当于最大连接数。
+            max-connection-life-time
+                The maximum life time for a pooled connection.
+            connect-timeout
+                The connect timeout in milliseconds. 0 is default and infinite.
+            socket-timeout
+               The socket timeout.  0 is default and infinite.
+            socket-keep-alive
+                The keep alive flag, controls whether or not to have socket keep alive timeout. Defaults to false.
+            server-selection-timeout
+                The server selection timeout in milliseconds, which defines how long the driver will wait for server selection to succeed before throwing an exception. Default is 30 seconds.
+            read-preference
+                The read preference.
+            write-concern
+                The WriteConcern that will be the default value used when asking the MongoDbFactory for a DB object
+            heartbeat-frequency
+                This is the frequency that the driver will attempt to determine the current state of each server in the cluster.
+            min-heartbeat-frequency
+                In the event that the driver has to frequently re-check a server's availability, it will wait at least this long since the previous check to avoid wasted effort.
+            heartbeat-connect-timeout
+                The connect timeout for connections used for the cluster heartbeat.
+            heartbeat-socket-timeout
+                The socket timeout for connections used for the cluster heartbeat.
+            ssl
+                This controls if the driver should us an SSL connection.  Defaults to false.
+            ssl-socket-factory-ref
+                The SSLSocketFactory to use for the SSL connection. If none is configured here, SSLSocketFactory#getDefault() will be used.
+        -->
+        <mongo:client-options connect-timeout="3000" max-connection-idle-time="6000" max-connection-life-time="12000"
+                              max-wait-time="5000" socket-keep-alive="true" description="测试mongo数据源"
+                              min-connections-per-host="10" connections-per-host="30"/>
+    </mongo:mongo-client>
+
+    <!-- 2.配置连接到指定数据库的MongoDbFactory -->
+    <mongo:db-factory id="mongoDeptDb" mongo-ref="mongoDataSource" dbname="dept"/>
+
+    <!-- 3.使用MongoDbFactory创建MongoTemplate -->
+    <mongo:template id="mongoDeptTemplate" db-factory-ref="mongoDeptDb"/>
+
+    <!-- 4.开启对Mongo仓库的支持 -->
+    <mongo:repositories base-package="com.spring.mongodb.repository" mongo-template-ref="mongoDeptTemplate"
+                        query-lookup-strategy="create" repository-impl-postfix="Impl"/>
+
+    <bean id="conversionService" class="org.springframework.format.support.FormattingConversionServiceFactoryBean"
+          p:registerDefaultFormatters="true"/>
+
+    <task:executor id="taskExecutor" rejection-policy="DISCARD_OLDEST" keep-alive="30" queue-capacity="5"
+                   pool-size="5-10"/>
+
+    <task:annotation-driven executor="taskExecutor"/>
+</beans>

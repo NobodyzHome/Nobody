@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+	xmlns:p="http://www.springframework.org/schema/p" xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring-1.2.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
+
+	<context:property-placeholder
+		file-encoding="UTF-8" ignore-resource-not-found="true"
+		ignore-unresolvable="false" local-override="true"
+		location="classpath:database/datasource.cfg.properties,classpath:database/**/db_*.properties" />
+
+	<bean id="abstractDataSource" class="org.apache.commons.dbcp2.BasicDataSource"
+		abstract="true" p:initialSize="${datasource.initialSize}" p:maxTotal="${datasource.maxTotal}"
+		p:minIdle="${datasource.minIdle}" p:maxIdle="${datasource.maxIdle}"
+		p:maxConnLifetimeMillis="${datasource.maxConnLifetimeMillis}"
+		p:defaultQueryTimeout="${datasource.defaultQueryTimeout}"
+		p:maxWaitMillis="${datasource.maxWaitMillis}" />
+
+	<!-- dao层配置 -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean"
+		p:dataSource-ref="dataSource" p:configLocation="classpath:mybatis/mybatis-configuration.xml"
+		p:mapperLocations="classpath:mybatis/mapping/**/*.xml" />
+
+	<mybatis-spring:scan base-package="com.spring.data.dao.mybatis" />
+
+	<!-- service层配置 -->
+	<bean id="dataSourceTransactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager"
+		autowire="byType" />
+
+	<context:component-scan base-package="com.spring.data.service" />
+
+	<tx:annotation-driven transaction-manager="dataSourceTransactionManager" />
+
+	<beans profile="test196,test">
+		<bean id="dataSource" parent="abstractDataSource" destroy-method="close"
+			p:url="${db.test.196.url}" p:driverClassName="${db.test.196.driverClassName}"
+			p:username="${db.test.196.username}" p:password="${db.test.196.password}" />
+	</beans>
+
+	<beans profile="jiayuguan,!test">
+		<bean id="dataSource" parent="abstractDataSource" destroy-method="close"
+			p:url="${db.run.jiayuguan.url}" p:driverClassName="${db.run.jiayuguan.driverClassName}"
+			p:username="${db.run.jiayuguan.username}" p:password="${db.run.jiayuguan.password}" />
+	</beans>
+</beans>

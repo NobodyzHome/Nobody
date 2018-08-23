@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:mvc="http://www.springframework.org/schema/mvc" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.3.xsd">
+
+	<mvc:annotation-driven conversion-service="conversionService"
+		content-negotiation-manager="contentNegotiationManager"
+		enable-matrix-variables="true" validator="validator">
+		<mvc:message-converters register-defaults="false">
+			<bean class="org.springframework.http.converter.StringHttpMessageConverter"
+				p:defaultCharset="#{T(java.nio.charset.Charset).defaultCharset()}" />
+			<bean
+				class="org.springframework.http.converter.ByteArrayHttpMessageConverter" />
+			<bean
+				class="org.springframework.http.converter.ResourceHttpMessageConverter" />
+			<bean
+				class="org.springframework.http.converter.ObjectToStringHttpMessageConverter">
+				<constructor-arg name="conversionService" ref="conversionService" />
+				<constructor-arg name="defaultCharset"
+					value="#{T(java.nio.charset.Charset).defaultCharset()}" />
+			</bean>
+			<bean
+				class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter"
+				p:prettyPrint="true" />
+			<bean
+				class="org.springframework.http.converter.xml.MappingJackson2XmlHttpMessageConverter"
+				p:prettyPrint="true" />
+		</mvc:message-converters>
+	</mvc:annotation-driven>
+
+	<mvc:view-resolvers>
+		<mvc:content-negotiation use-not-acceptable="true">
+			<mvc:default-views>
+				<bean
+					class="org.springframework.web.servlet.view.json.MappingJackson2JsonView"
+					p:prettyPrint="true" p:exposePathVariables="true">
+					<property name="attributes">
+						<props>
+							<prop key="zhangsan">张三</prop>
+							<prop key="lisi">李四</prop>
+						</props>
+					</property>
+				</bean>
+
+				<bean id="excelView" class="com.spring.web.view.ExcelView"
+					p:exposePathVariables="false" />
+			</mvc:default-views>
+		</mvc:content-negotiation>
+
+		<bean id="xmlViewResolver" class="org.springframework.web.servlet.view.XmlViewResolver"
+			p:location="classpath:spring/views/xmlView.xml" p:order="-15" />
+
+		<bean id="beanNameViewResolver"
+			class="org.springframework.web.servlet.view.BeanNameViewResolver"
+			p:order="-20" />
+
+		<bean id="resourceBundleViewResolver"
+			class="org.springframework.web.servlet.view.ResourceBundleViewResolver"
+			p:basenames="spring/views/view" p:order="-30" />
+
+		<bean id="internalResourceViewResolver"
+			class="org.springframework.web.servlet.view.InternalResourceViewResolver"
+			p:prefix="/WEB-INF/pages/" p:suffix=".jsp" p:exposePathVariables="true"
+			p:requestContextAttribute="requestContext"
+			p:exposeContextBeansAsAttributes="true">
+			<property name="attributes">
+				<props>
+					<prop key="jay">周杰伦</prop>
+					<prop key="selina">任家萱</prop>
+				</props>
+			</property>
+		</bean>
+	</mvc:view-resolvers>
+
+	<bean id="dept" class="com.spring.data.domain.BaseDept" p:deptNo="No:1,321"
+		p:deptCode="1321dept" p:deptName="1321公司" p:isRun="off"
+		p:modifyDate="2017-10-22 13:27:51" />
+
+	<bean id="xmlView"
+		class="org.springframework.web.servlet.view.xml.MappingJackson2XmlView"
+		p:prettyPrint="true" p:modelKey="dept">
+		<property name="attributesMap">
+			<map>
+				<entry key="dept" value-ref="dept" />
+			</map>
+		</property>
+	</bean>
+
+	<context:component-scan base-package="com.spring.web.controller" />
+
+	<bean id="conversionService"
+		class="org.springframework.format.support.FormattingConversionServiceFactoryBean"
+		p:registerDefaultFormatters="true">
+		<property name="formatters">
+			<bean class="com.spring.data.conversion.BaseDeptFormatter" />
+		</property>
+	</bean>
+
+	<bean id="contentNegotiationManager"
+		class="org.springframework.web.accept.ContentNegotiationManagerFactoryBean"
+		p:favorParameter="true" p:parameterName="format" p:favorPathExtension="true"
+		p:ignoreAcceptHeader="false" p:ignoreUnknownPathExtensions="true"
+		p:defaultContentType="#{T(org.springframework.http.MediaType).TEXT_PLAIN_VALUE}">
+		<property name="mediaTypes">
+			<value>
+				htm=#{T(org.springframework.http.MediaType).TEXT_HTML_VALUE}
+				html=#{T(org.springframework.http.MediaType).TEXT_HTML_VALUE}
+				json=#{T(org.springframework.http.MediaType).APPLICATION_JSON_VALUE}
+				xml=#{T(org.springframework.http.MediaType).APPLICATION_XML_VALUE}
+				txt=#{T(org.springframework.http.MediaType).TEXT_PLAIN_VALUE}
+				xls=application/vnd.ms-excel
+				xlsx=application/vnd.ms-excel
+			</value>
+		</property>
+	</bean>
+
+	<bean id="localeResolver"
+		class="org.springframework.web.servlet.i18n.CookieLocaleResolver"
+		p:cookieName="cookieInfo" />
+
+	<bean id="themeResolver"
+		class="org.springframework.web.servlet.theme.CookieThemeResolver"
+		p:cookieName="themeInfo" />
+
+	<bean id="themeSource"
+		class="org.springframework.ui.context.support.ResourceBundleThemeSource"
+		p:fallbackToSystemLocale="true" p:basenamePrefix="i18n/theme/" />
+
+	<mvc:interceptors>
+		<bean class="org.springframework.web.servlet.i18n.LocaleChangeInterceptor"
+			p:paramName="locale" p:httpMethods="get,post" />
+		<bean class="org.springframework.web.servlet.theme.ThemeChangeInterceptor"
+			p:paramName="theme" />
+	</mvc:interceptors>
+
+	<bean id="messageSource"
+		class="org.springframework.context.support.ResourceBundleMessageSource"
+		p:basenames="i18n/validation/error,i18n/validation/message,i18n/validation/field,i18n/validation/button,i18n/validation/exception"
+		p:fallbackToSystemLocale="true" p:useCodeAsDefaultMessage="false"
+		p:defaultEncoding="#{T(java.nio.charset.Charset).defaultCharset().name()}" />
+
+	<bean id="validator"
+		class="org.springframework.validation.beanvalidation.OptionalValidatorFactoryBean"
+		p:validationMessageSource-ref="messageSource" />
+
+	<bean id="multipartResolver"
+		class="org.springframework.web.multipart.support.StandardServletMultipartResolver" />
+
+	<mvc:resources location="WEB-INF/images/" mapping="/images/**" />
+	<mvc:resources location="WEB-INF/scripts/" mapping="/scripts/**" />
+	<mvc:resources location="WEB-INF/styles/" mapping="/styles/**" />
+	<mvc:resources location="classpath:,file:/Users/maziqiang/Downloads/"
+		mapping="/secret/**" />
+
+	<mvc:view-controller path="/themeExcercise" />
+	<mvc:view-controller path="/upload*.htm" view-name="upload" />
+	<mvc:view-controller path="/show/**" />
+
+	<!-- <bean id="simpleMappingExceptionResolver" class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver" 
+		p:defaultErrorView="views_urlView" p:defaultStatusCode="#{T(org.springframework.http.HttpStatus).UNAUTHORIZED.value()}" 
+		p:exceptionAttribute="ex" p:order="5"> <property name="exceptionMappings"> 
+		<value> TestException1=xmlView TestException2=myView TestException3=show/main 
+		</value> </property> <property name="statusCodes"> <value> xmlView=#{T(org.springframework.http.HttpStatus).NON_AUTHORITATIVE_INFORMATION.value()} 
+		myView=#{T(org.springframework.http.HttpStatus).GATEWAY_TIMEOUT.value()} 
+		views_urlView=#{T(org.springframework.http.HttpStatus).NOT_EXTENDED.value()} 
+		</value> </property> </bean> -->
+</beans>

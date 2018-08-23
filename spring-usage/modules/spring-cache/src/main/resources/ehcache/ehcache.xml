@@ -1,0 +1,42 @@
+<ehcache xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://ehcache.org/ehcache.xsd">
+
+	<!-- diskStore用于控制缓存写入到文件时，文件所在的目录。缓存文件名一般为：cacheName.data，例如"dept_region.data" -->
+	<diskStore path="${ehcache.disk.store}" />
+
+	<defaultCache maxEntriesLocalHeap="10000" eternal="false"
+		timeToIdleSeconds="120" timeToLiveSeconds="120" maxEntriesLocalDisk="10000000"
+		diskExpiryThreadIntervalSeconds="120" memoryStoreEvictionPolicy="LRU">
+		<persistence strategy="localTempSwap" />
+	</defaultCache>
+
+	<!-- cache属性的配置 -->
+	<!-- 1.maxEntriesLocalHeap，jvm内存中最多能存储多少个Entry -->
+	<!-- 2.maxBytesLocalHeap,jvm内存中最多能存储多少容量的Entry。可以是10K，20M，30G等带单位的数值 -->
+	<!-- 3.maxEntriesLocalDisk，本地硬盘中最多能存储多少个Entry -->
+	<!-- 4.maxBytesLocalDisk,本地硬盘中最多能存储多少容量的Entry。 -->
+	<!-- 5.memoryStoreEvictionPolicy，当内存中Entry存储满后，当再有新的Entry要进来时，对已有的Entry进行清除的策略 -->
+	<!-- 6.eternal，用于指定Cache中的Entry是否是永久存在的。值为true则是永久存在的，为false则不是。 -->
+	<!-- 7.timeToIdleSeconds，Entry在缓存区域中最大的空闲时间，如果超过设置的值，就将该Entry从当前cache中清除 -->
+	<!-- 8.timeToLiveSeconds，Entry在缓存区域中最长的存活时间，如果超过设置的值，就将该Entry从当前cache中清除 -->
+	<!-- 9.copyOnRead用于控制，当从缓存中读取value时，读取的不是value对象本身，而是value的一个深拷贝（使用序列化方式进行拷贝） -->
+	<!-- 10.copyOnWrite用于控制，当往缓存中写key和value时，写的不是value对象本身，而是value的一个深拷贝（使用序列化方式进行拷贝） -->
+	<!-- 11.<persistence>子元素代表着，如果内存中的Entry已经满了的话，再有新的Entry要进来时，允许写到硬盘中 -->
+
+	<!-- overflowToDisk和diskPersistent、DiskStoreBootstrapCacheLoaderFactory是在2.5及之前版本拥有的参数； 
+		2.6及之后的版本建议使用persistence或terracotta来代替 -->
+	<cache name="date_region" maxEntriesLocalHeap="0"
+		maxBytesLocalHeap="0" maxBytesLocalDisk="10M"
+		memoryStoreEvictionPolicy="LRU" timeToIdleSeconds="60"
+		timeToLiveSeconds="120" copyOnRead="false" copyOnWrite="false">
+		<persistence strategy="localTempSwap" />
+	</cache>
+
+	<cache name="dept_region" maxEntriesLocalHeap="0"
+		maxEntriesLocalDisk="100" eternal="false" memoryStoreEvictionPolicy="LFU"
+		timeToLiveSeconds="120" timeToIdleSeconds="60" copyOnRead="false"
+		copyOnWrite="false">
+		<persistence strategy="localTempSwap" />
+	</cache>
+
+</ehcache>

@@ -1,0 +1,22 @@
+<ehcache xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://ehcache.org/ehcache.xsd">
+
+	<diskStore path="${project.build.directory}/ehcache" />
+
+	<defaultCache maxElementsInMemory="200" eternal="false"
+		copyOnRead="false" copyOnWrite="false" memoryStoreEvictionPolicy="FIFO"
+		timeToIdleSeconds="300" timeToLiveSeconds="600" />
+
+	<cache name="controller" maxEntriesLocalHeap="100"
+		maxEntriesLocalDisk="200" memoryStoreEvictionPolicy="LFU" eternal="false"
+		copyOnRead="false" copyOnWrite="false" timeToIdleSeconds="120"
+		timeToLiveSeconds="900">
+		<persistence strategy="localTempSwap" />
+	</cache>
+
+	<cache name="service" maxBytesLocalHeap="10M" maxBytesLocalDisk="200M"
+		eternal="false" memoryStoreEvictionPolicy="LRU" copyOnRead="false"
+		copyOnWrite="false">
+		<persistence strategy="localTempSwap" />
+	</cache>
+</ehcache>

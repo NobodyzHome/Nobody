@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE  mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "../../schema/mybatis/mybatis-3-mapper.dtd">
+<mapper namespace="com.spring.data.dao.BaseRoleLineMapper">
+
+	<sql id="dynamicSingleQuery">
+		<trim prefix="select" prefixOverrides="," suffixOverrides=",|;">
+			<foreach collection="columnNames" item="columnName"
+				separator=",">
+				${columnName}
+			</foreach>
+		</trim>
+
+		from ${tableToQuery}
+
+		<where>
+			<foreach collection="conditions" index="columnName" item="condition">
+				<if test="@java.util.Objects@nonNull(condition)">
+					<choose>
+						<when
+							test="condition.getClass().isArray() or @java.util.Collection@class.isInstance(condition)">
+							and ${columnName} in
+							<foreach collection="condition" item="singleCondition"
+								open="(" close=")" separator=",">
+								#{singleCondition}
+							</foreach>
+						</when>
+						<when test="condition instanceof java.lang.String">
+							<bind name="likePatternCondition" value="'%'+condition+'%'" />
+							and ${columnName} = #{likePatternCondition}
+						</when>
+						<when test="@java.util.Date@class.isInstance(condition)">
+							and trunc(${columnName})=trunc(#{condition})
+						</when>
+						<otherwise>
+							and ${columnName} = #{condition}
+						</otherwise>
+					</choose>
+				</if>
+			</foreach>
+		</where>
+	</sql>
+
+	<select id="findByLine" resultMap="roleLineBySelect">
+		<bind name="columnNames"
+			value="new String[]{'line_no','role_no','operate','modify_date'}" />
+		<bind name="conditions"
+			value="#@java.util.HashMap@{'line_no':lineNo,'operate':operate}" />
+
+		<include refid="dynamicSingleQuery">
+			<property name="tableToQuery" value="base_role_line" />
+		</include>
+	</select>
+
+	<select id="findByRole" resultMap="roleLineBySelect">
+		<bind name="columnNames"
+			value="new String[]{'line_no','role_no','operate','modify_date'}" />
+		<bind name="conditions" value="#{'role_no':roleNo,'operate':operate}" />
+
+		<include refid="dynamicSingleQuery">
+			<property name="tableToQuery" value="base_role_line" />
+		</include>
+	</select>
+
+	<resultMap type="BaseRoleLine" id="roleLineBySelect">
+		<result property="operate" column="operate" />
+		<result property="modifyDate" column="modify_date" />
+
+		<association property="line" select="querySingleLine"
+			column="line_no" />
+		<association property="role" select="querySingleRole"
+			column="{roleNo=role_no}" />
+	</resultMap>
+
+	<select id="querySingleLine" resultType="BaseLine">
+		select * from base_line
+		where line_no=#{lineNo}
+	</select>
+
+	<select id="querySingleRole" resultType="BaseRole">
+		select * from base_role
+		where role_no=#{roleNo}
+	</select>
+
+	<sql id="associationQuery">
+		select
+		rl.line_no,rl.role_no,rl.operate,rl.modify_date,l.line_name,l.line_code,l.is_run,r.role_name,r.description,r.active
+		from base_role_line rl,base_role r,base_line l where
+		rl.line_no=l.line_no and rl.role_no=r.role_no
+
+		<if test="@java.util.Objects@nonNull(roleNo)">
+			and rl.role_no=#{roleNo}
+		</if>
+
+		<if test="@java.util.Objects@nonNull(lineNo)">
+			and rl.line_no=#{lineNo}
+		</if>
+
+		<if test="@java.util.Objects@nonNull(operate)">
+			and rl.operate=#{operate}
+		</if>
+
+		<if test="@java.util.Objects@nonNull(modifyDate)">
+			and trunc(rl.modify_date)=trunc(#{modifyDate})
+		</if>
+	</sql>
+
+	<select id="fineByRoleLine" resultMap="roleLine">
+		<bind name="modifyDate" value="null" />
+		<include refid="associationQuery" />
+	</select>
+
+	<select id="findByOperate" resultMap="roleLine">
+		<bind name="roleNo" value="null" />
+		<bind name="lineNo" value="null" />
+		<bind name="modifyDate" value="null" />
+		<include refid="associationQuery" />
+	</select>
+
+	<select id="findByModifyDate" resultMap="roleLine">
+		<bind name="roleNo" value="null" />
+		<bind name="lineNo" value="null" />
+		<bind name="operate" value="null" />
+		<include refid="associationQuery" />
+	</select>
+
+	<resultMap type="BaseRoleLine" id="roleLine">
+		<result property="operate" column="operate" />
+		<result property="modifyDate" column="modify_date" />
+
+		<association property="line" javaType="BaseLine">
+			<constructor>
+				<idArg javaType="Integer" column="line_no" />
+				<arg javaType="String" column="line_code" />
+			</constructor>
+
+			<result property="lineName" column="line_name" />
+			<result property="isRun" column="is_run" />
+		</association>
+
+		<association property="role" javaType="BaseRole">
+			<constructor>
+				<idArg javaType="Integer" column="role_no" />
+				<arg javaType="String" column="role_name" />
+			</constructor>
+
+			<result property="description" column="description" />
+			<result property="active" column="active" />
+		</association>
+	</resultMap>
+</mapper>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ehcache xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://ehcache.org/ehcache.xsd">
+
+	<diskStore path="${project.build.directory}/ehcache" />
+
+	<defaultCache maxEntriesLocalHeap="100" maxElementsOnDisk="200"
+		eternal="false" memoryStoreEvictionPolicy="FIFO" timeToIdleSeconds="120"
+		timeToLiveSeconds="600" copyOnRead="false" copyOnWrite="false">
+		<persistence strategy="localTempSwap" />
+	</defaultCache>
+
+	<cache name="dept_region" maxEntriesLocalHeap="100" eternal="false"
+		memoryStoreEvictionPolicy="LRU" timeToIdleSeconds="60"
+		timeToLiveSeconds="180" />
+
+	<cache name="line_region" maxBytesLocalHeap="10M"
+		maxBytesLocalDisk="200M" eternal="false" memoryStoreEvictionPolicy="LFU"
+		timeToIdleSeconds="300" timeToLiveSeconds="600">
+		<persistence strategy="localTempSwap" />
+	</cache>
+
+	<cache name="date_region" maxEntriesLocalHeap="50"
+		maxBytesLocalDisk="50M" eternal="false" memoryStoreEvictionPolicy="FIFO"
+		copyOnRead="false" copyOnWrite="false">
+		<persistence strategy="localTempSwap" />
+	</cache>
+</ehcache>

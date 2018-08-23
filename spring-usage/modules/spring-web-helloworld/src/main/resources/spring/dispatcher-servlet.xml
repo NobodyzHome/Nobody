@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:p="http://www.springframework.org/schema/p"
+       xmlns:c="http://www.springframework.org/schema/c"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc.xsd http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
+
+    <bean id="charset" class="java.lang.String" c:original="#{T(java.nio.charset.Charset).defaultCharset().name()}"/>
+
+    <mvc:annotation-driven enable-matrix-variables="true" conversion-service="conversionService"
+                           content-negotiation-manager="contentNegotiationManager">
+        <mvc:message-converters>
+            <bean class="org.springframework.http.converter.xml.MappingJackson2XmlHttpMessageConverter"
+                  p:defaultCharset-ref="charset"/>
+            <bean class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter"
+                  p:defaultCharset-ref="charset"/>
+            <bean class="org.springframework.http.converter.ObjectToStringHttpMessageConverter"
+                  c:defaultCharset-ref="charset" c:conversionService-ref="conversionService"/>
+        </mvc:message-converters>
+    </mvc:annotation-driven>
+
+    <context:component-scan base-package="com.spring.web.controller"/>
+
+    <mvc:view-resolvers>
+        <mvc:content-negotiation use-not-acceptable="true"/>
+        <mvc:bean-name/>
+        <mvc:jsp prefix="/WEB-INF/pages/" suffix=".jsp"/>
+    </mvc:view-resolvers>
+
+    <mvc:resources mapping="/scripts/**" location="/WEB-INF/scripts/"/>
+    <mvc:resources mapping="/styles/**" location="/WEB-INF/styles/"/>
+    <mvc:resources mapping="/images/**" location="/WEB-INF/images/"/>
+
+    <mvc:default-servlet-handler/>
+
+    <bean id="contentNegotiationManager" class="org.springframework.web.accept.ContentNegotiationManagerFactoryBean"
+          p:favorParameter="true" p:parameterName="format" p:favorPathExtension="true" p:ignoreAcceptHeader="true"
+          p:defaultContentType="text/html">
+        <property name="mediaTypes">
+            <value>
+                txt=text/plain
+                htm=text/html
+                html=text/html
+                json=application/json
+                xml=application/xml
+            </value>
+        </property>
+    </bean>
+
+    <bean id="conversionService" class="org.springframework.format.support.FormattingConversionServiceFactoryBean"
+          p:registerDefaultFormatters="true"/>
+
+    <bean id="jsonView" class="org.springframework.web.servlet.view.json.MappingJackson2JsonView">
+        <property name="attributes">
+            <value>
+                hello=world
+                name=zhang san
+                world=nice shot
+            </value>
+        </property>
+        <property name="prettyPrint" value="true"/>
+    </bean>
+
+    <bean id="xmlView" class="org.springframework.web.servlet.view.xml.MappingJackson2XmlView">
+        <property name="attributes">
+            <value>
+                jay=zhou jie lun
+                mayday=wu yue tian
+            </value>
+        </property>
+        <property name="prettyPrint" value="true"/>
+        <property name="modelKey" value="jay"/>
+    </bean>
+</beans>

@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:p="http://www.springframework.org/schema/p" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd">
+
+	<!-- SyncTaskExecutor是同步执行任务的TaskExecutor -->
+	<bean id="syncTaskExecutor" class="org.springframework.core.task.SyncTaskExecutor" />
+
+	<!-- SimpleAsyncTaskExecutor是异步执行任务的TaskExecutor。同时该类继承自CustomizableThreadCreator，可以作为ThreadFactory，来创建线程 -->
+	<!-- SimpleAsyncTaskExecutor并不是使用ThreadPoolExecutor来执行任务，而是通过使用ThreadFactory的接口的功能来创建线程，并使用这个创建的线程来执行任务 -->
+	<!-- 注意：concurrencyLimit属性用于控制该TaskExecutor最大开启的线程数，当同时向该TaskExecutor中提交的任务数大于concurrencyLimit，线程池并不会报错， 
+		而是会等待线程池中有线程恢复为idle状态，使用这个线程来执行该任务。 -->
+	<bean id="simpleAsyncTaskExecutor" class="org.springframework.core.task.SimpleAsyncTaskExecutor"
+		p:threadGroupName="gp" p:threadNamePrefix="tn" p:concurrencyLimit="8"
+		p:threadPriority="#{T(java.lang.Thread).MAX_PRIORITY}" />
+
+	<!-- spring的ThreadPoolExecutorFactoryBean是用于创建jdk1.5的ThreadPoolExecutor的FactoryBean -->
+	<!-- 一个线程池最多能同时接受的任务数量为：maxPoolSize + queueCapacity，如果超过这个数量，则会交由rejectedExecutionHandler来处理。但是注意： 
+		这个说的是同时最多能接受的任务数量，但是线程池的最大的线程数只能是maxPoolSize。 -->
+	<!-- ThreadPoolExecutorFactoryBean继承自ExecutorConfigurationSupport，实现了ThreadFactory接口。因此，ThreadPoolExecutorFactoryBean所 
+		创建的ThreadPoolExecutor，实际上是使用ThreadPoolExecutorFactoryBean对象来创建线程 -->
+	<!-- waitForTasksToCompleteOnShutdown属性：如果该属性为false，那么调用ThreadPoolExecutor的shutdown方法后，则立即中断（interrupting）所有正在执行的任务 
+		，并清空任务队列。如果该属性为true，那么会等待线程池中的所有任务执行完（fully completed），才会关闭连接池。该属性的默认值为false。 -->
+	<!-- 注意：也就是说，关闭线程池时主要要完成两件事：1.中断线程池中所有正在执行的线程。2.清空任务队列中的任务。 -->
+	<!-- Set whether to wait for scheduled tasks to complete on shutdown, not 
+		interrupting running tasks and executing all tasks in the queue. Default 
+		is "false", shutting down immediately through interrupting ongoing tasks 
+		and clearing the queue. Switch this flag to "true" if you prefer fully completed 
+		tasks at the expense of a longer shutdown phase. -->
+
+	<!-- awaitTerminationSeconds属性：该属性用于控制当调用ThreadPoolExecutor的shutdown方法后，需要等待多长时间来继续执行线程池中的剩余任务。当超过这个时间， 
+		线程池则会中断（interrupting）所有正在执行的任务，并清空任务队列。 -->
+	<!-- 注意：如果要使该属性生效，那么需要同时设置waitForTasksToCompleteOnShutdown属性为true(set "waitForTasksToCompleteOnShutdown" 
+		to true at the same time)。使线程池不会完全等待队列中的所有任务执行完成，而是仅等待awaitTerminationSeconds指定的秒钟数。 -->
+	<!-- Set the maximum number of seconds that this executor is supposed to 
+		block on shutdown in order to wait for remaining tasks to complete their 
+		execution before the rest of the container continues to shut down. This is 
+		particularly useful if your remaining tasks are likely to need access to 
+		other resources that are also managed by the container. By default, this 
+		executor won't wait for the termination of tasks at all. It will either shut 
+		down immediately, interrupting ongoing tasks and clearing the remaining task 
+		queue - or, if the "waitForTasksToCompleteOnShutdown" flag has been set to 
+		true, it will continue to fully execute all ongoing tasks as well as all 
+		remaining tasks in the queue, in parallel to the rest of the container shutting 
+		down. In either case, if you specify an await-termination period using this 
+		property, this executor will wait for the given time (max) for the termination 
+		of tasks. As a rule of thumb, specify a significantly higher timeout here 
+		if you set "waitForTasksToCompleteOnShutdown" to true at the same time, since 
+		all remaining tasks in the queue will still get executed - in contrast to 
+		the default shutdown behavior where it's just about waiting for currently 
+		executing tasks that aren't reacting to thread interruption. -->
+	<bean id="threadPoolExecutor"
+		class="org.springframework.scheduling.concurrent.ThreadPoolExecutorFactoryBean"
+		p:daemon="true" p:keepAliveSeconds="120" p:corePoolSize="2"
+		p:maxPoolSize="5" p:queueCapacity="2"
+		p:rejectedExecutionHandler="#{new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy()}"
+		p:threadNamePrefix="threadPool" p:allowCoreThreadTimeOut="false"
+		p:waitForTasksToCompleteOnShutdown="true" p:awaitTerminationSeconds="300" />
+
+	<!-- 创建一个spring的ConcurrentTaskExecutor，该ConcurrentTaskExecutor在执行任务时，直接是使用聚合的Executor实例来执行任务 -->
+	<!-- 该TaskExecutor比较少会被使用，通常使用的是ThreadPoolTaskExecutor，可以直接进行配置。而如果ThreadPoolTaskExecutor能提供的配置并没有完全满足 
+		客户的需要，此时可以使用ConcurrentTaskExecutor，由客户自己创建一个已配置好的Executor实例，并将该实例交给ConcurrentTaskExecutor。 -->
+	<bean id="concurrentTaskExecutor"
+		class="org.springframework.scheduling.concurrent.ConcurrentTaskExecutor"
+		p:concurrentExecutor-ref="threadPoolExecutor" />
+
+	<!-- 创建一个spring的ThreadPoolTaskExecutor，在该类中提供了多个创建jdk1.5的ThreadPoolExecutor所需要的配置。通过对该类的属性进行配置后， 
+		，ThreadPoolTaskExecutor会使用这些配置创建一个ThreadPoolExecutor实例，使用该实例执行任务。 -->
+	<!-- 注意：ThreadPoolTaskExecutor继承自ExecutorConfigurationSupport，而ExecutorConfigurationSupport实现了ThreadFactory接口， 
+		因此，ThreadPoolTaskExecutor会将自身传入给创建的ThreadPoolExecutor，用于线程的创建。 -->
+	<bean id="threadPoolTaskExecutor"
+		class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor"
+		p:corePoolSize="3" p:maxPoolSize="5" p:daemon="false"
+		p:keepAliveSeconds="150" p:queueCapacity="5" p:threadGroupName="group"
+		p:threadNamePrefix="pool" />
+
+	<!-- TaskExecutor总结： -->
+	<!-- 1.SimpleAsyncTaskExecutor实现了ThreadFactory，它在进行任务的执行时，是使用其自身的ThreadFactory接口的功能，创建一个线程，然后在这个线程中执行任务。 
+		因此，该类没有太多线程池中的功能。例如：corePoolSize,maxPoolSize,queueCapacity这些配置。 -->
+	<!-- 2.ConcurrentTaskExecutor在进行任务的执行时，是使用聚合的Executor，由其来进行任务的执行。 -->
+	<!-- 3.ThreadPoolTaskExecutor是根据该类中的属性值，来创建一个jdk1.5的ThreadPoolExecutor，由其来进行任务执行。同时，ThreadPoolTaskExecutor实现了 
+		ThreadFactory。因此，在创建ThreadPoolExecutor时，会将ThreadPoolTaskExecutor实例自身传入给ThreadPoolExecutor，用于线程的创建 -->
+
+	<!-- 以下是ThreadPoolExecutor的相关概念： -->
+	<!-- 关于corePoolSize和maxPoolSize： -->
+	<!-- 1.当有任务提交到线程池中时，如果线程池中的线程数量小于corePoolSize，那么就会创建一个新的线程来执行这个任务。 -->
+	<!-- 2.当有任务提交到线程池中时，此时线程池中的数量和corePoolSize相同，那么此时会将这个提交的任务存放至任务队列中。 -->
+	<!-- 3.当任务队列中的任务数量已满时，如果线程池又收到了提交的任务，并且maxPoolSize比corePoolSize大，此时线程池就会创建一个新的线程，来执行这个任务。 -->
+	<!-- 4.以此类推，直至线程池中线程的数量到达maxPoolSize。当线程池中线程数量到达maxPoolSize，并且任务队列中的任务数量已满时，如果再向线程池中提交任务， 
+		此时会交由rejection-policy来处理，决定是抛出异常，还是放弃这个提交的任务等等。 -->
+	<!-- The main idea is that when a task is submitted, the executor will first 
+		try to use a free thread if the number of active threads is currently less 
+		than the core size. If the core size has been reached, then the task will 
+		be added to the queue as long as its capacity has not yet been reached. Only 
+		then, if the queue’s capacity has been reached, will the executor create 
+		a new thread beyond the core size. If the max size has also been reached, 
+		then the executor will reject the task. -->
+
+	<!-- 关于keep-alive的配置： keep-alive控制的是线程池中超过corePoolSize数量的线程的最长空闲时间。如果这样的线程的空闲时间超过keep-alive的配置，那么 
+		就会结束该线程。如果值为0，那么这样的线程在执行完任务后，就会立即被关闭，而不是再等待执行任务队列中的任务。 -->
+	<!-- 注意：通常情况下，线程池中corePoolSize数量内的线程不会受到keep-alive的影响。但是如果ThreadPoolExecutor的allowCoreThreadTimeOut属性为true， 
+		那么corePoolSize数量内的线程也会受到keep-alive的影响，导致线程由于长时间的空闲而被关闭。 -->
+	<!-- The keep-alive setting determines the time limit (in seconds) for which 
+		threads may remain idle before being terminated. If there are more than the 
+		core number of threads currently in the pool, after waiting this amount of 
+		time without processing a task, excess threads will get terminated. A time 
+		value of zero will cause excess threads to terminate immediately after executing 
+		a task without remaining follow-up work in the task queue. -->
+
+	<!-- 关于queue-capacity的配置：默认情况下，任务队列是无界的，也就是说线程池中可以接受任意多的任务，并添加到任务队列中。此时，只有corePoolSize数量的线程 
+		会执行这些任务，而不会创建新的线程。因此，如果任务队列是无界的，那么maxPooSize的配置就无效了。如果任务队列是无界的，那么线程池对于所有提交的任务，都会 
+		存储到任务队列中，而不会拒绝提交的任务。因此，通常情况下，使用的都是有界队列，可以让线程池拒绝无法处理的任务，减少线程池的负担。 -->
+
+	<!-- 关于rejection-policy的配置：rejection-policy用于控制对无法处理的任务的拒绝策略。它对应的是ThreadPoolExecutor内提供的 
+		RejectedExecutionHandler接口的实现类。 -->
+	<!-- CALLER_RUN是直接在调用Executor的submit方法的线程中执行被拒绝的任务。That policy will simply 
+		force the thread that is calling the submit method to run the task itself. -->
+	<!-- ABORT是让Executor对于被拒绝的任务抛出RejectedExecutionException异常 -->
+	<!-- DISCARD是让Executor抛弃被拒绝的任务，不进行任何处理 -->
+	<!-- DISCARD_OLDEST是让Executor从任务队列中抛弃一个最长时间没有被执行的任务，然后将被拒绝的任务重新提交到线程池中 -->
+
+	<!-- 使用task:executor来快捷创建一个ThreadPoolTaskExecutor，其中pool-size为2-5，代表要创建的ThreadPoolExecutor的corePoolSize为2， 
+		maxPoolSize为5 -->
+	<task:executor id="threadPoolTaskExecutor1" pool-size="2-5"
+		queue-capacity="3" rejection-policy="DISCARD_OLDEST" keep-alive="150" />
+
+	<context:component-scan base-package="com.spring.task.service" />
+
+	<!-- 设置默认使用的Executor，这样如果@Async注解中没有给出value属性，则使用的是这个默认的executor -->
+	<!-- 注意：这里executor属性可以指定的bean只要是Executor的实例即可，不用必须是TaskExecutor的实例 -->
+	<task:annotation-driven executor="threadPoolTaskExecutor1" />
+</beans>

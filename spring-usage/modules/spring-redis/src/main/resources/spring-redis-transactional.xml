@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:p="http://www.springframework.org/schema/p" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:redis="http://www.springframework.org/schema/redis" xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/redis http://www.springframework.org/schema/redis/spring-redis-1.0.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
+
+	<bean id="redisConnectionFactory"
+		class="com.spring.redis.registration.RedisConnectionFactoryBean"
+		p:hostname="localhost" p:port="63790" p:dbIndex="0" p:minIdle="5"
+		p:maxIdle="8" p:maxTotal="20" p:maxWaitSeconds="120" p:usePool="true"
+		p:minEvictableSeconds="60" />
+
+	<bean id="conversionService"
+		class="org.springframework.format.support.FormattingConversionServiceFactoryBean"
+		p:registerDefaultFormatters="true">
+		<property name="formatters">
+			<bean class="org.springframework.format.datetime.DateFormatter"
+				p:pattern="yyyy-MM-dd" />
+		</property>
+	</bean>
+
+	<bean id="dateToStringSerializer"
+		class="org.springframework.data.redis.serializer.GenericToStringSerializer"
+		c:type="java.util.Date" p:conversionService-ref="conversionService" />
+
+	<bean id="genericJsonSerializer"
+		class="org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer" />
+
+	<bean id="stringSerializer"
+		class="org.springframework.data.redis.serializer.StringRedisSerializer" />
+
+	<bean id="jdkSerializer"
+		class="org.springframework.data.redis.serializer.JdkSerializationRedisSerializer" />
+
+	<bean id="redisTemplate" class="org.springframework.data.redis.core.RedisTemplate"
+		p:connectionFactory-ref="redisConnectionFactory" p:keySerializer-ref="dateToStringSerializer"
+		p:valueSerializer-ref="genericJsonSerializer" p:hashKeySerializer-ref="stringSerializer"
+		p:hashValueSerializer-ref="jdkSerializer" />
+
+	<bean id="dataSourceTransactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager"
+		p:dataSource-ref="dataSource" />
+
+	<bean id="service" class="com.spring.redis.data.service.TestService" />
+
+	<tx:advice id="txAdvisor" transaction-manager="dataSourceTransactionManager">
+		<tx:attributes>
+			<tx:method name="service*" read-only="false" />
+			<tx:method name="*" read-only="true" />
+		</tx:attributes>
+	</tx:advice>
+
+	<aop:config>
+		<aop:advisor advice-ref="txAdvisor" pointcut="bean(service)" />
+	</aop:config>
+</beans>

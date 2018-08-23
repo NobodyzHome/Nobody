@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:redis="http://www.springframework.org/schema/redis" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/redis http://www.springframework.org/schema/redis/spring-redis-1.0.xsd">
+
+	<bean id="redisConnectionFactory"
+		class="com.spring.redis.registration.RedisConnectionFactoryBean"
+		p:hostname="localhost" p:port="63790" p:dbIndex="0" p:minIdle="5"
+		p:maxIdle="8" p:maxTotal="20" p:maxWaitSeconds="120"
+		p:minEvictableSeconds="300" p:usePool="true"/>
+
+	<bean id="stringRedisTemplate" class="org.springframework.data.redis.core.StringRedisTemplate"
+		c:connectionFactory-ref="redisConnectionFactory" />
+
+	<bean id="stringRedisSerializer"
+		class="org.springframework.data.redis.serializer.StringRedisSerializer"
+		c:charset="#{T(java.nio.charset.Charset).defaultCharset()}" />
+
+	<bean id="serializationRedisSerializer"
+		class="org.springframework.data.redis.serializer.JdkSerializationRedisSerializer" />
+
+	<bean id="jacksonRedisSerializer"
+		class="org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer" />
+
+	<task:executor id="listenerInvocationExecutor"
+		keep-alive="300" pool-size="5-30" queue-capacity="2" rejection-policy="ABORT" />
+
+	<bean id="subscriber" class="com.spring.redis.listener.Subscriber" />
+	<bean id="subscriber1" class="com.spring.redis.listener.Subscriber1" />
+
+	<bean id="genericSerializer"
+		class="org.springframework.data.redis.serializer.GenericToStringSerializer"
+		c:type="java.lang.String" />
+
+	<bean id="conversionService"
+		class="org.springframework.format.support.FormattingConversionServiceFactoryBean"
+		p:registerDefaultFormatters="true" />
+
+	<!-- 关于<redis:listener-container>的配置细节 -->
+	<!-- 1.不要把订阅模式频道的监听器和订阅普通频道的监听器混合放在同一个<listener-container>中，否则会发生订阅者无法收到消息的问题 
+		举例来说：在一个<listener-container>中，<listener topic="t*t hello">或 <listener topic="t*t"> 
+		<listener topic="hello">，这两种配置方法都是不合法的。不论是在一个<listener>中还是在多个<listener>中，都不能同时订阅模式频道和普通频道 -->
+	<!-- 2.可以设置多个<redis:listener-container>，把订阅模式频道的<listener>放在一个<listener-container>中， 
+		把订阅普通频道的<listener>放到另一个<listener-container>中。 -->
+	<!-- 3.在同一个<listener-container>中，如果后面的<listener>的ref、method、serializer这三个属性值和前面的<listener>完全相同， 
+		那么前面的<listener>则会失效。 这也就是告诉我们：在同一个<listener-container>中，不要把一个<listener>的ref、method、serializer 
+		属性设置的和另一个<listener>完全相同 -->
+	<!-- 另外，如果想恢复被覆盖的<listener>，一种办法是把被覆盖的<listener>放到另一个<listener-container>中 -->
+	<redis:listener-container connection-factory="redisConnectionFactory"
+		task-executor="listenerInvocationExecutor" topic-serializer="stringRedisSerializer">
+		<!-- 这个<listener>被第七个<listener>覆盖了，因此这个<listener>就无效了 -->
+		<redis:listener ref="subscriber" method="handleMessage"
+			topic="t*t" serializer="jacksonRedisSerializer" />
+
+		<redis:listener ref="subscriber" method="handleMessage"
+			topic="t*t h*" serializer="serializationRedisSerializer" />
+
+		<!-- 这个<listener>被第五个<listener>覆盖了，因此这个<listener>就无效了 -->
+		<redis:listener ref="subscriber" method="handleMessage"
+			topic="t*t" serializer="stringRedisSerializer" />
+
+		<redis:listener ref="subscriber1" method="handleMessage1"
+			topic="h*o" serializer="serializationRedisSerializer" />
+
+		<!-- 可以看到，当前这个<listener>和第三个<listener>的method、serializer、topic属性值完全相同，那么第三个<listener>就无效了。 -->
+		<redis:listener ref="subscriber" method="handleMessage"
+			serializer="stringRedisSerializer" topic="h*o w*f" />
+
+		<redis:listener ref="subscriber1" method="handleMessage"
+			serializer="serializationRedisSerializer" topic="d*t h*h" />
+
+		<!-- 同理，当前这个<listener>覆盖了第一个<listener>，那么第一个<listener>就无效了 -->
+		<redis:listener ref="subscriber" method="handleMessage"
+			serializer="jacksonRedisSerializer" topic="wonder* color_* *room" />
+	</redis:listener-container>
+
+	<!-- 把被覆盖的<listener>放到了另一个<listener-container>中，那么这两个<listener>在这个<listener-container>中是有效的 -->
+	<redis:listener-container connection-factory="redisConnectionFactory"
+		task-executor="listenerInvocationExecutor" topic-serializer="stringRedisSerializer">
+		<redis:listener ref="subscriber" method="handleMessage"
+			serializer="stringRedisSerializer" topic="h*o w*f" />
+
+		<redis:listener ref="subscriber" method="handleMessage"
+			serializer="jacksonRedisSerializer" topic="h*o" />
+	</redis:listener-container>
+
+	<!-- 为了不混用模式频道和普通频道的订阅者，因此又写了一个<listener-container>，这里放的都是监听普通频道的<listener> -->
+	<redis:listener-container connection-factory="redisConnectionFactory"
+		task-executor="listenerInvocationExecutor">
+		<redis:listener ref="subscriber" method="handleMessage"
+			serializer="stringRedisSerializer" topic="chatroom dept" />
+
+		<redis:listener ref="subscriber" method="handleMessage"
+			serializer="jacksonRedisSerializer" topic="chatroom" />
+
+		<redis:listener ref="subscriber" method="handleMessage"
+			serializer="genericSerializer" topic="time dept line" />
+	</redis:listener-container>
+</beans>

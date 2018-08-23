@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE  mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "../../schema/mybatis/mybatis-3-mapper.dtd">
+<mapper namespace="mybatis.mappings.dynamicSql">
+	<sql id="dynamicColumns">
+		<trim prefix="select" prefixOverrides="," suffixOverrides=",|;">
+			<choose>
+				<when test="columns instanceof java.util.Map">
+					<foreach collection="columns" index="columnName" item="columnAlias"
+						separator=",">
+						${columnName} ${columnAlias}
+					</foreach>
+				</when>
+				<when
+					test="columns.getClass().isArray() or @java.util.Collection@.class.isAssignableFrom(columns.getClass())">
+					<foreach collection="columns" item="columnName">
+						${columnName}
+					</foreach>
+				</when>
+			</choose>
+		</trim>
+	</sql>
+
+	<sql id="dynamicConditions">
+		<where>
+			<foreach collection="conditionMap" index="columnName" item="conditionValue">
+				<if test="@java.util.Objects@nonNull(conditionValue)">
+					<choose>
+						<when
+							test="conditionValue.getClass().isArray() or conditionValue instanceof java.util.Collection">
+							and ${columnName} in
+							<foreach collection="conditionValue" item="condition"
+								open="(" close=")" separator=",">
+								#{condition}
+							</foreach>
+						</when>
+						<when test="conditionValue instanceof java.lang.String">
+							<bind name="likeCondition" value="'%'+conditionValue+'%'" />
+							and ${columnName} like #{likeCondition}
+						</when>
+						<when test="conditionValue instanceof java.util.Date">
+							and ${columnName} = trunc(#{conditionValue})
+						</when>
+						<otherwise>
+							and ${columnName} = #{conditionValue}
+						</otherwise>
+					</choose>
+				</if>
+			</foreach>
+		</where>
+	</sql>
+
+	<sql id="queryTemplate">
+		<include refid="mybatis.mappings.dynamicSql.dynamicColumns" />
+		from ${tableToQuery}
+		<include refid="mybatis.mappings.dynamicSql.dynamicConditions" />
+	</sql>
+</mapper>

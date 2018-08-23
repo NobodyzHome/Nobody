@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE  mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "../../schema/mybatis/mybatis-3-mapper.dtd">
+<mapper namespace="com.spring.data.dao.BaseLineMapper">
+
+	<sql id="queryBasic">
+		select a.line_no,a.line_code,a.line_name,a.is_run
+		line_is_run,a.modify_date
+		line_modify_date,a.dept_no
+		${columnPrefix}dept_no,b.dept_code
+		${columnPrefix}dept_code,b.dept_name
+		${columnPrefix}dept_name,b.is_run
+		${columnPrefix}is_run,b.modify_date ${columnPrefix}modify_date from
+		base_line a,base_dept
+		b where a.dept_no=b.dept_no
+
+		<if test="@java.util.Objects@nonNull(deptNo)">
+			and a.dept_no = #{deptNo}
+		</if>
+
+		<if test="@org.apache.commons.lang3.ArrayUtils@isNotEmpty(lineNoArray)">
+			and a.line_no in
+			<foreach collection="lineNoArray" item="lineNo" open="("
+				close=")" separator=",">
+				#{lineNo}
+			</foreach>
+		</if>
+
+		<if test="@java.util.Objects@nonNull(isRun)">
+			and a.is_run = #{isRun}
+		</if>
+	</sql>
+
+	<select id="queryLines" resultMap="lineWithDept">
+		<include refid="queryBasic" />
+	</select>
+
+	<select id="queryLinesWithPrefix" resultMap="lineWithDept1">
+		<include refid="queryBasic">
+			<property name="columnPrefix" value="dept_" />
+		</include>
+	</select>
+
+	<select id="queryLineBasic" resultMap="lineBasic">
+		select * from base_line
+		<where>
+			<if test="@java.util.Objects@nonNull(lineNo)">
+				and line_no = #{lineNo}
+			</if>
+			<if test="@org.springframework.util.StringUtils@hasText(lineName)">
+				<bind name="lineNameLikePattern" value="'%'+lineName+'%'" />
+				and line_name like #{lineNameLikePattern}
+			</if>
+		</where>
+	</select>
+
+	<select id="queryLineSelectDept" resultMap="lineSelectDept"
+		useCache="false">
+		select * from
+		base_line where line_no = #{lineNo}
+	</select>
+
+	<select id="queryLineByDept" resultMap="lineSelectDept">
+		select * from base_line
+		where dept_no = #{deptNo}
+	</select>
+
+	<resultMap type="BaseLine" id="lineBasic">
+		<constructor>
+			<idArg javaType="int" column="line_no" />
+			<arg javaType="string" column="line_code" />
+		</constructor>
+
+		<result property="lineName" column="line_name" />
+		<result property="isRun" column="is_run" />
+		<result property="modifyDate" column="modify_date" />
+	</resultMap>
+
+	<resultMap type="BaseLine" id="lineWithDept" extends="lineBasic">
+		<association property="dept" javaType="BaseDept">
+			<id property="deptNo" column="dept_no" />
+			<result property="deptCode" column="dept_code" />
+			<result property="deptName" column="dept_name" />
+			<result property="isRun" column="dept_is_run" />
+			<result property="modifyDate" column="dept_modify_date" />
+		</association>
+	</resultMap>
+
+	<resultMap type="BaseLine" id="lineWithDept1" extends="lineBasic">
+		<association property="dept"
+			resultMap="com.spring.data.dao.BaseDeptMapper.deptBasic"
+			columnPrefix="dept_" />
+	</resultMap>
+
+	<resultMap type="BaseLine" id="lineSelectDept" extends="lineBasic">
+		<association property="dept"
+			select="com.spring.data.dao.BaseDeptMapper.queryDeptSelectLines"
+			column="dept_no" />
+	</resultMap>
+
+	<select id="callFunction" statementType="CALLABLE">
+		{#{timeInterval,mode=OUT,jdbcType=INTEGER,javaType=integer}=call
+		timestamp_cha(#{startTime},#{endTime})}
+	</select>
+
+</mapper>

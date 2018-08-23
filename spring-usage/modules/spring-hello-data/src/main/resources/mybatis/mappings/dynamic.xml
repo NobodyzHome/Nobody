@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "../../schema/mybatis/mybatis-3-mapper.dtd">
+<mapper namespace="com.spring.dynamic">
+	<sql id="dynamicSelect">
+		<trim prefixOverrides=",|;|." suffixOverrides=",|;" prefix="select">
+			<choose>
+				<when test="columns instanceof java.util.Map">
+					<foreach collection="columns" index="columnName" item="columnAlias"
+						separator=",">
+						${columnName} ${columnAlias}
+					</foreach>
+				</when>
+				<when
+					test="columns.getClass().isArray() or @java.util.Collection@class.isInstance(columns)">
+					<foreach collection="columns" item="columnName" separator=",">
+						${columnName}
+					</foreach>
+				</when>
+				<otherwise>
+					null
+				</otherwise>
+			</choose>
+		</trim>
+	</sql>
+
+	<sql id="dynamicCondition">
+		<where>
+			<foreach collection="conditions" index="columnName" item="conditionValue">
+				<if test="@java.util.Objects@nonNull(conditionValue)">
+					<choose>
+						<when
+							test="conditionValue.getClass().isArray or @java.util.Collection@class.isInstance(conditionValue)">
+							and ${columnName} in
+							<foreach collection="conditionValue" item="condition"
+								open="(" close=")" separator=",">
+								#{condition}
+							</foreach>
+						</when>
+						<when test="conditionValue instanceof java.util.Date">
+							and trunc(${columnName}) =
+							trunc(#{conditionValue})
+						</when>
+						<when
+							test="@java.lang.String@class.isAssignableFrom(conditionValue.getClass())">
+							and ${columnName} like '%'||#{conditionValue}||'%'
+						</when>
+						<otherwise>
+							and ${columnName} = #{conditionValue}
+						</otherwise>
+					</choose>
+				</if>
+			</foreach>
+		</where>
+	</sql>
+
+	<sql id="dynamicOrder">
+		<choose>
+			<when test="columns instanceof java.util.Map">
+				<foreach collection="columns" index="columnName" open="order by "
+					separator=",">
+					${columnName}
+				</foreach>
+			</when>
+			<when
+				test="@org.springframework.util.ObjectUtils@isArray(columns) or @java.util.Collection@class.isInstance(columns)">
+				<foreach collection="columns" item="columnName" open="order by "
+					separator=",">
+					${columnName}
+				</foreach>
+			</when>
+		</choose>
+	</sql>
+
+	<sql id="dynamicQuery">
+		<include refid="com.spring.dynamic.dynamicSelect" />
+		from ${tableToQuery}
+		<include refid="com.spring.dynamic.dynamicCondition" />
+		<include refid="com.spring.dynamic.dynamicOrder" />
+	</sql>
+</mapper>

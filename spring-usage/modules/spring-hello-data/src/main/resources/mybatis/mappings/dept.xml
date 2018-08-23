@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "../../schema/mybatis/mybatis-3-mapper.dtd">
+<mapper namespace="com.spring.data.dao.mapper.BaseDeptMapper">
+	<sql id="dynamicQueryDept">
+		<bind name="columns"
+			value="new java.lang.String[]{'dept_no','dept_code','dept_name','modify_date','is_run','dept_level','parent_dept_no'}" />
+
+		<include refid="com.spring.dynamic.dynamicQuery">
+			<property name="tableToQuery" value="base_dept" />
+		</include>
+	</sql>
+
+	<select id="findByExample" resultMap="deptMap">
+		<bind name="conditions"
+			value="#@java.util.HashMap@{'dept_no':deptNo,'dept_code':deptCode,'dept_name':deptName,'modify_date':modifyDate,'is_run':isRun,'dept_level':deptLevel,'parent_dept_no':parent==null?null:parent.deptNo}" />
+
+		<include refid="dynamicQueryDept" />
+	</select>
+
+	<select id="findById" resultMap="deptMapWithLines">
+		<bind name="conditions" value="#{'dept_no':deptNo}" />
+		<include refid="dynamicQueryDept" />
+	</select>
+
+	<resultMap type="BaseDept" id="baseDeptMap">
+		<constructor>
+			<idArg column="dept_no" javaType="java.lang.Integer" />
+			<arg column="dept_code" javaType="java.lang.String" />
+		</constructor>
+
+		<result column="dept_name" property="deptName" />
+		<result column="modify_date" property="modifyDate" />
+		<result column="is_run" property="isRun" />
+		<result column="dept_level" property="deptLevel" />
+	</resultMap>
+
+	<resultMap type="BaseDept" id="deptMap" extends="baseDeptMap">
+		<association property="parent" select="findById"
+			column="{deptNo=parent_dept_no}" />
+	</resultMap>
+
+	<resultMap type="BaseDept" id="deptMapWithLines" extends="deptMap">
+		<collection property="lines"
+			select="com.spring.data.dao.mapper.BaseLineMapper.selectByCondition"
+			column="{deptNo=dept_no}" />
+	</resultMap>
+
+	<insert id="insertByExample">
+		<bind name="columns"
+			value="new java.lang.String[]{'dept_no','dept_code','dept_name','modify_date','is_run','dept_level','parent_dept_no'}" />
+		<bind name="columnValues"
+			value="new java.lang.Object[]{deptNo,deptCode,deptName,modifyDate,isRun,deptLevel,@java.util.Objects@isNull(parent)?null:parent.deptNo}" />
+
+		insert into base_dept
+		<foreach collection="columns" item="columnName" open="("
+			close=")" separator=",">
+			${columnName}
+		</foreach>
+		values
+		<foreach collection="columnValues" item="columnValue" open="("
+			close=")" separator=",">
+			#{columnValue}
+		</foreach>
+	</insert>
+
+	<update id="updateByParams">
+		update base_dept
+		<set>
+			<foreach collection="updateValues" index="columnName" item="updateValue"
+				separator=",">
+				${columnName}=#{updateValue}
+			</foreach>
+		</set>
+
+		<include refid="com.spring.dynamic.dynamicCondition" />
+	</update>
+
+	<delete id="deleteByParams">
+		<bind name="conditions"
+			value="#{'dept_no':deptNoArray,'dept_code':deptCodeArray,'is_run':isRun
+			,'parent_dept_no':@java.util.Objects@isNull(parentDept)?null:parentDept.deptNo}" />
+		delete from base_dept
+
+		<include refid="com.spring.dynamic.dynamicCondition" />
+	</delete>
+
+	<!-- 注意：由于该<select>中有out类型变量，因此该<select>的结果无法使用二级缓存来存储，此时应把<select>的useCache属性设置为false。 
+		否则会报异常：org.apache.ibatis.executor.ExecutorException: Caching stored procedures 
+		with OUT params is not supported. Please configure useCache=false in com.spring.data.dao.mapper.BaseDeptMapper.callFunction 
+		statement. -->
+	<!-- 调用function的格式是：{?(out)=call functionName(?,?)} -->
+	<select id="callFunction" statementType="CALLABLE" useCache="false">
+		{#{intervalHours,mode=OUT,javaType=int,jdbcType=INTEGER}=call
+		TIMESTAMP_interval_to_hours(#{startTime},#{endTime})}
+	</select>
+
+	<!-- 调用procudure的格式是：call procedureName(?,?,?(OUT),?(OUT)) -->
+	<select id="callProcedure" statementType="CALLABLE" useCache="false">
+		call
+		PK_FUN_BASIC.QUERY_SHIFT_MODEL(#{lineNo},trunc(#{planDate}),trunc(#{planDate}),#{shiftModel,mode=OUT,javaType=string,jdbcType=VARCHAR}
+		,#{errNo,mode=OUT,javaType=int,jdbcType=INTEGER},#{errMsg,mode=OUT,javaType=string,jdbcType=VARCHAR})
+	</select>
+
+	<select id="queryDeptWithParent" resultMap="deptWithParent">
+		select
+		child.dept_no,child.dept_code,child.dept_name,child.is_run,child.modify_date,child.dept_level,
+		parent.dept_no parent_dept_no,parent.dept_code
+		parent_dept_code,parent.dept_name parent_dept_name,parent.is_run
+		parent_is_run,parent.modify_date parent_modify_date,parent.dept_level
+		parent_dept_level,
+		from base_dept
+		child,base_dept parent where
+		child.dept_no=parent.dept_no
+	</select>
+
+	<resultMap type="BaseDept" id="deptWithParent" extends="baseDeptMap">
+		<association property="parent" resultMap="baseDeptMap"
+			columnPrefix="parent_" />
+	</resultMap>
+
+	<select id="selectDeptWithLines" resultMap="deptWithLines">
+		select
+		dept.dept_no,dept.dept_code,dept.dept_name,dept.is_run
+		dept_is_run,dept.dept_level,dept.parent_dept_no,dept.modify_date
+		dept_modify_date,line.line_no,line.line_code,line.line_name,line.is_run
+		line_is_run,line.modify_time line_modify_date,line.dept_no
+		line_dept_no from base_dept
+		dept,base_line line
+
+		<where>
+			and dept.dept_no=line.dept_no
+			and dept.dept_no=#{deptNo}
+		</where>
+	</select>
+
+	<resultMap type="BaseDept" id="deptWithLines">
+		<constructor>
+			<idArg column="dept_no" javaType="int" />
+			<arg column="dept_code" javaType="string" />
+		</constructor>
+
+		<result property="deptName" column="dept_name" />
+		<result property="isRun" column="dept_is_run" />
+		<result property="deptLevel" column="dept_level" />
+		<result property="modifyDate" column="dept_modify_date" />
+
+		<association property="parent" select="findById"
+			column="{deptNo=parent_dept_no}" />
+
+		<collection property="lines" ofType="BaseLine">
+			<id property="lineNo" column="line_no" />
+			<result property="lineCode" column="line_code" />
+			<result property="lineName" column="line_name" />
+			<result property="modifyDate" column="line_modify_date" />
+			<result property="isRun" column="line_is_run" />
+			<association property="dept" select="findById"
+				column="{deptNo=line_dept_no}" />
+		</collection>
+	</resultMap>
+
+	<select id="deptWithAllInfo" resultMap="deptTerminalsMapper">
+		select
+		dept.dept_no,dept.dept_code,dept.dept_name,dept.modify_date
+		dept_modify_date,dept.dept_level,dept.is_run
+		dept_is_run,dept.parent_dept_no,parent.dept_code
+		parent_dept_code,parent.dept_name
+		parent_dept_name,parent.modify_date
+		parent_modify_date,parent.dept_level parent_dept_level,parent.is_run
+		parent_is_run,parent.parent_dept_no
+		parent_no,line.line_no,line.line_code,line.line_name,line.is_run
+		line_is_run,line.modify_time
+		line_modify_date,terminal.terminal_no,terminal.terminal_code,terminal.modify_date
+		terminal_modify_date from
+		base_dept dept,base_dept parent,base_line
+		line,base_terminal
+		terminal
+		<where>
+			and dept.dept_no=line.dept_no
+			and line.line_no=terminal.line_no
+			and dept.parent_dept_no=parent.dept_no
+			and dept.dept_no=#{deptNo}
+		</where>
+	</select>
+
+	<resultMap type="BaseDept" id="deptTerminalsMapper">
+		<constructor>
+			<idArg column="dept_no" javaType="int" />
+			<arg column="dept_code" javaType="string" />
+		</constructor>
+
+		<result property="deptName" column="dept_name" />
+		<result property="modifyDate" column="dept_modify_date" />
+		<result property="deptLevel" column="dept_level" />
+		<result property="isRun" column="dept_is_run" />
+
+		<association property="parent" javaType="BaseDept">
+			<constructor>
+				<idArg column="parent_dept_no" javaType="int" />
+				<arg column="parent_dept_code" javaType="string" />
+			</constructor>
+
+			<result property="deptName" column="parent_dept_name" />
+			<result property="modifyDate" column="parent_modify_date" />
+			<result property="deptLevel" column="parent_dept_level" />
+			<result property="isRun" column="parent_is_run" />
+
+			<!-- <association property="parent" select="findById" -->
+			<!-- column="{deptNo=parent_no}" /> -->
+
+			<!-- <collection -->
+			<!-- select="com.spring.data.dao.mapper.BaseLineMapper.selectByCondition" -->
+			<!-- property="lines" column="{deptNo=parent_dept_no}" /> -->
+		</association>
+
+		<collection property="lines" ofType="BaseLine">
+			<constructor>
+				<idArg column="line_no" javaType="int" />
+				<arg column="line_code" javaType="string" />
+				<arg column="line_name" javaType="string" />
+			</constructor>
+
+			<result column="line_is_run" property="isRun" />
+			<result column="line_modify_date" property="modifyDate" />
+
+			<!-- <association property="dept" select="findById" column="{deptNo=dept_no}" 
+				/> -->
+
+			<collection property="terminals" ofType="BaseTerminal">
+				<id property="terminalNo" column="terminal_no" />
+				<result property="terminalCode" column="terminal_code" />
+				<result property="modifyDate" column="terminal_modify_date" />
+
+				<!-- <association property="line" -->
+				<!-- select="com.spring.data.dao.mapper.BaseLineMapper.selectByCondition" -->
+				<!-- column="{lineNo=line_no}" /> -->
+			</collection>
+		</collection>
+	</resultMap>
+
+	<!-- <cache readOnly="true" eviction="FIFO" flushInterval="600000" -->
+	<!-- size="200" /> -->
+</mapper>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:p="http://www.springframework.org/schema/p" xmlns:redis="http://www.springframework.org/schema/redis"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/redis http://www.springframework.org/schema/redis/spring-redis-1.0.xsd">
+
+	<bean id="redisConnectionFactory"
+		class="com.spring.redis.registration.RedisConnectionFactoryBean"
+		p:hostname="localhost" p:port="63790" p:dbIndex="0" p:minIdle="5"
+		p:maxIdle="8" p:maxTotal="20" p:maxWaitSeconds="120" p:usePool="true"
+		p:minEvictableSeconds="60" />
+
+	<bean id="messageListener" class="com.spring.redis.listener.TestListener" />
+
+	<redis:listener-container connection-factory="redisConnectionFactory">
+		<redis:listener ref="messageListener" method="handleMessage"
+			topic="helloWorld chatroom" />
+	</redis:listener-container>
+
+</beans>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:p="http://www.springframework.org/schema/p" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:cache="http://www.springframework.org/schema/cache"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring-1.2.xsd
+		http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache-4.3.xsd
+		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
+
+	<bean id="concurrentMapCacheManager"
+		class="org.springframework.cache.concurrent.ConcurrentMapCacheManager"
+		c:cacheNames="hello,world,test" />
+
+	<bean id="ehCacheManager" class="org.springframework.cache.ehcache.EhCacheCacheManager">
+		<property name="cacheManager">
+			<bean class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean"
+				p:acceptExisting="true" p:configLocation="classpath:ehcache/ehcache.xml" />
+		</property>
+	</bean>
+
+	<bean id="transactionalCacheManager"
+		class="org.springframework.cache.transaction.TransactionAwareCacheManagerProxy"
+		c:targetCacheManager-ref="ehCacheManager" />
+
+	<bean id="cacheResolver"
+		class="org.springframework.cache.interceptor.NamedCacheResolver"
+		c:cacheManager-ref="concurrentMapCacheManager" c:cacheNames="hello,world" />
+
+	<context:property-placeholder
+		file-encoding="UTF-8" location="classpath:database/**/*.properties"
+		ignore-resource-not-found="true" ignore-unresolvable="false" />
+
+	<bean id="abstractDataSource" abstract="true"
+		class="org.apache.commons.dbcp2.BasicDataSource" p:initialSize="${datasource.default.initialSize}"
+		p:maxTotal="${datasource.default.maxTotal}" p:minIdle="${datasource.default.minIdle}"
+		p:maxIdle="${datasource.default.maxIdle}" p:maxConnLifetimeMillis="${datasource.default.maxConnLifetimeMillis}"
+		p:defaultQueryTimeout="${datasource.default.defaultQueryTimeout}"
+		p:maxWaitMillis="${datasource.default.maxWaitMillis}" />
+
+	<bean id="dataSource" parent="abstractDataSource" destroy-method="close"
+		p:url="${db.jiayuguan.url}" p:driverClassName="${db.jiayuguan.driverClassName}"
+		p:username="${db.jiayuguan.username}" p:password="${db.jiayuguan.password}" />
+
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean"
+		p:configLocation="classpath:mybatis/mybatis-configuration.xml"
+		p:mapperLocations="classpath:mybatis/mappings/**/*.xml"
+		p:dataSource-ref="dataSource" />
+
+	<mybatis-spring:scan base-package="com.spring.data.mapper" />
+
+	<bean id="dataSourceTransactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager"
+		p:dataSource-ref="dataSource" />
+
+	<context:component-scan base-package="com.spring.data.service" />
+
+	<tx:annotation-driven transaction-manager="dataSourceTransactionManager" />
+
+	<cache:advice id="serviceTransactionCache" cache-manager="ehCacheManager">
+		<cache:caching>
+			<!-- 这行的意思是，如果连接点方法是以timestampCha开头的，那么则在这个连接点的责任链中的CacheInterceptor中插入一个Cacheable缓存操作 -->
+			<cache:cacheable method="timestampCha*" cache="service"
+				sync="true" />
+			<cache:cache-evict method="queryDeptList" cache="service"
+				all-entries="true" before-invocation="false" />
+		</cache:caching>
+	</cache:advice>
+
+	<aop:config>
+		<aop:pointcut
+			expression="execution(@org.springframework.transaction.annotation.Transactional public * 
+		(@org.springframework.stereotype.Service com.spring.data.service..*Service).*(..))"
+			id="serviceTransactionalMethods" />
+
+		<!-- advisor就是把指定的MethodInterceptor插入到连接点方法的责任链对象中，在这里插入的是CacheInterceptor -->
+		<aop:advisor advice-ref="serviceTransactionCache"
+			pointcut-ref="serviceTransactionalMethods" order="-1" />
+	</aop:config>
+
+	<task:executor id="threadPoolExecutor" keep-alive="120"
+		pool-size="5-10" queue-capacity="8" rejection-policy="DISCARD_OLDEST" />
+
+	<task:annotation-driven executor="threadPoolExecutor" />
+
+	<!-- <bean id="deptTask" class="com.spring.task.data.BaseDeptTask" /> <task:scheduler 
+		id="threadPoolScheduler" pool-size="10" /> <task:annotation-driven scheduler="threadPoolScheduler" 
+		/> <task:scheduled-tasks> <task:scheduled ref="deptTask" method="deptQueryTask1" 
+		fixed-rate="5000" /> </task:scheduled-tasks> -->
+</beans>

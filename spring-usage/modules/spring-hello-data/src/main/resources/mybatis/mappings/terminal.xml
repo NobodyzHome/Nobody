@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "../../schema/mybatis/mybatis-3-mapper.dtd">
+<mapper namespace="com.spring.data.dao.mapper.BaseTerminalMapper">
+	<select id="findById" resultMap="terminalMap">
+		select * from base_terminal
+		where terminal_no=#{terminalNo}
+	</select>
+
+	<resultMap type="BaseTerminal" id="baseTerminalMap">
+		<id property="terminalNo" column="terminal_no" />
+		<result property="terminalCode" column="terminal_code" />
+		<result property="modifyDate" column="modify_date" />
+	</resultMap>
+
+	<resultMap type="BaseTerminal" id="terminalMap" extends="baseTerminalMap">
+		<association property="line"
+			select="com.spring.data.dao.mapper.BaseLineMapper.selectById" column="{lineNoArray=line_no}" />
+	</resultMap>
+
+	<select id="findByIdWithLines" resultMap="terminalWithLine">
+		select
+		terminal_no,terminal_code,modify_date
+		terminal_modify_date,line.line_no,line.line_code,line.line_name,line.is_run
+		line_is_run,line.modify_time
+		line_modify_date,dept.dept_no,dept.dept_code,dept.dept_name,dept.is_run
+		dept_is_run,dept.dept_level,dept.parent_dept_no,dept.modify_date
+		dept_modify_date from base_terminal
+		terminal
+		,base_line
+		line,base_dept
+		dept where
+		terminal.line_no=line.line_no and
+		dept.dept_no=line.dept_no
+		and terminal_no=#{terminalNo}
+	</select>
+
+	<resultMap type="BaseTerminal" id="terminalWithLine">
+		<id property="terminalNo" column="terminal_no" />
+		<result property="terminalCode" column="terminal_code" />
+		<result property="modifyDate" column="terminal_modify_date" />
+
+		<association property="line" javaType="BaseLine">
+			<constructor>
+				<idArg column="line_no" javaType="int" />
+				<arg column="line_code" javaType="string" />
+				<arg column="line_name" javaType="string" />
+			</constructor>
+
+			<result property="isRun" column="line_is_run" />
+			<result property="modifyDate" column="line_modify_date" />
+
+			<association property="dept" javaType="BaseDept">
+				<constructor>
+					<idArg column="dept_no" javaType="int" />
+					<arg column="dept_code" javaType="string" />
+				</constructor>
+
+				<result column="dept_name" property="deptName" />
+				<result column="dept_is_run" property="isRun" />
+				<result column="dept_level" property="deptLevel" />
+				<result column="dept_modify_date" property="modifyDate" />
+
+<!-- 				<association property="parent" -->
+<!-- 					select="com.spring.data.dao.mapper.BaseDeptMapper.findById" column="{deptNo=parent_dept_no}" /> -->
+			</association>
+		</association>
+	</resultMap>
+</mapper>

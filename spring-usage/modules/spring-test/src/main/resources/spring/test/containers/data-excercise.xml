@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:c="http://www.springframework.org/schema/c" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+	xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+	xmlns:p="http://www.springframework.org/schema/p" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:cache="http://www.springframework.org/schema/cache"
+	xsi:schemaLocation="http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-4.3.xsd
+		http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring-1.2.xsd
+		http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.3.xsd">
+
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean"
+		p:dataSource-ref="dataSource" p:configLocation="classpath:mybatis/mybatis-configuration.xml"
+		p:mapperLocations="classpath:mybatis/mappings/**/*.xml" />
+
+	<mybatis-spring:scan base-package="com.spring.data.dao" />
+
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager"
+		p:dataSource-ref="dataSource" />
+
+	<bean id="daoLogger" class="com.spring.aop.logger.DaoLogger" />
+
+	<aop:config expose-proxy="true">
+		<aop:pointcut
+			expression="execution(public * com.spring.data.dao..*Mapper.query*(..)) and this(proxy) and target(target)"
+			id="daoQueryMethods" />
+
+		<aop:aspect ref="daoLogger">
+			<aop:after method="logAfter" pointcut-ref="daoQueryMethods"
+				arg-names="target,proxy" />
+			<aop:after-returning method="logAfterReturning"
+				pointcut-ref="daoQueryMethods" returning="result" arg-names="result,target,proxy" />
+			<aop:after-throwing method="logOnException"
+				pointcut-ref="daoQueryMethods" throwing="ex" arg-names="ex,target,proxy" />
+			<aop:around method="logAround" pointcut-ref="daoQueryMethods"
+				arg-names="target,proxy" />
+			<aop:before method="logBefore" pointcut-ref="daoQueryMethods"
+				arg-names="target,proxy" />
+		</aop:aspect>
+	</aop:config>
+
+	<bean id="messageSource"
+		class="org.springframework.context.support.ResourceBundleMessageSource"
+		p:basename="i18n/validation/err" />
+
+	<bean id="validator"
+		class="org.springframework.validation.beanvalidation.OptionalValidatorFactoryBean"
+		p:validationMessageSource-ref="messageSource" />
+
+	<bean
+		class="org.springframework.validation.beanvalidation.MethodValidationPostProcessor"
+		p:validator-ref="validator" />
+
+	<bean
+		class="org.springframework.validation.beanvalidation.BeanValidationPostProcessor"
+		p:validator-ref="validator" />
+
+	<bean id="conversionService"
+		class="org.springframework.format.support.FormattingConversionServiceFactoryBean">
+		<property name="registerDefaultFormatters" value="true" />
+		<property name="formatters">
+			<set>
+				<bean class="org.springframework.format.datetime.DateFormatter"
+					c:pattern="yyyy-MM-dd" />
+				<bean class="org.springframework.format.datetime.DateFormatter"
+					p:pattern="yyyy-MM-dd kk:mm:ss" />
+			</set>
+		</property>
+	</bean>
+
+	<bean id="baseDept1" class="com.spring.data.domain.BaseDept"
+		p:deptNo="9" p:deptCode="1234" p:deptName="测试公司123" p:isRun="true"
+		p:modifyDate="2017-08-30 13:22:56" />
+
+	<bean id="jdkCacheManager"
+		class="org.springframework.cache.concurrent.ConcurrentMapCacheManager"
+		c:cacheNames="dept,line" />
+
+	<bean id="allCacheResolver"
+		class="org.springframework.cache.interceptor.NamedCacheResolver"
+		c:cacheManager-ref="jdkCacheManager" c:cacheNames="dept,line" />
+
+	<cache:annotation-driven cache-manager="jdkCacheManager" />
+
+	<beans profile="embedded,default">
+		<!-- 创建一个内嵌的数据源 -->
+		<jdbc:embedded-database id="dataSource" type="HSQL">
+			<jdbc:script encoding="UTF-8" execution="INIT"
+				location="classpath:sql/embedded/table_create/*_schema.sql" />
+			<jdbc:script encoding="UTF-8" execution="INIT"
+				location="classpath:sql/embedded/data/dept.sql" />
+		</jdbc:embedded-database>
+
+		<!-- 使用脚本来初始化指定的数据源 -->
+		<jdbc:initialize-database data-source="dataSource"
+			enabled="true" ignore-failures="ALL">
+			<jdbc:script encoding="UTF-8" execution="INIT"
+				location="classpath:sql/embedded/data/lineTeam.sql" />
+		</jdbc:initialize-database>
+	</beans>
+
+	<beans profile="test">
+		<context:property-placeholder location="classpath:database/**/*.properties" />
+		<bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource"
+			destroy-method="close" p:initialSize="${datasource.default.initialSize}"
+			p:maxTotal="${datasource.default.maxTotal}" p:url="${db.test.196.url}"
+			p:driverClassName="${db.test.196.driverClassName}" p:username="${db.test.196.username}"
+			p:password="${db.test.196.password}" />
+	</beans>
+</beans>

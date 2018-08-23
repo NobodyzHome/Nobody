@@ -1,0 +1,70 @@
+student:
+  id: ${random.long(100,1500)}
+  # 随机的字符串
+  name: ${random.value}
+  age: ${random.int(10,13)}
+  sex: 女
+
+  #给Student类的List<String> alias属性赋值
+  # 如果要给一个集合属性赋值，例如List，数组等，那么集合中每一个元素需要以"- "标识，标识它是集合中的一个元素。例如"- lili"标识集合中有一个元素是lili
+  alias:
+    # 在value中引用其他的占位符
+    - ${student.alias[1]}测试
+    - 小花
+    - 悠悠
+  #给Student类的Integer[] sanWei属性赋值
+  sanWei:
+    # 随机int值，在10到90之间（不包括90）
+    - ${random.int(10,90)}
+    # 随机int值，小于30
+    - 10${random.int(30)}
+    # 随机int值，值没有固定的范围
+    - ${random.int}
+
+  # 假如Student类中有一个address属性，是Address类型的，那么在配置文件中可以通过address.postCode=xxxx来为address属性中的postCode属性进行赋值
+  address:
+    #给Student类的Address类型属性address的postCode属性赋值
+    postCode: 300${random.int(100,1000)}
+    province: 天津市
+    city: 天津
+    county: 河北区
+    address: 荣业大街111号
+    #给Student类的Address类型属性address的Set<Integer> otherPostCodes属性赋值
+    otherPostCodes:
+      - 300000
+      - 300121
+      - 300331
+      - 300111
+    tags:
+      - 河北区
+      - 商业区
+      - 紧邻地铁
+  #给Student类的@DateTimeFormat(pattern = "yyyy-MM-dd kk:mm:ss") Date birthDay属性赋值
+  birthDay: 2010-11-05 13:22:51
+  #给Student类的@NumberFormat(pattern = "第#,###位学生") Integer identifyNo属性赋值
+  identifyNo: 第1,323,219位学生
+  #给Student类的Map<String, Integer> friendsNo属性赋值
+  friendsNo:
+    Mr-Zhang: 10091
+    Miss-Li: 13009
+  #给Student类的Map<String, Student> friends属性赋值
+  #其中Mr-Bigger是key，id、name、age这些是Mr-Bigger这个key对应的Student类型的value的属性
+  friends:
+    # 注意：key不能有. ，否则有可能解析不出来
+    Mr-Bigger:
+      id: 11
+      name: 吴伟
+      age: ${random.int(10,30)}
+      sex: 男
+      alias:
+        - 吴
+        - 小伟
+        - 狗蛋
+    Mr-Tmp:
+      id: 209
+      name: 张益达
+      age: 20
+      sex: 男
+      alias:
+        - snake
+        - 张大炮

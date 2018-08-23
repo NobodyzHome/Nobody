@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:redis="http://www.springframework.org/schema/redis" xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/redis http://www.springframework.org/schema/redis/spring-redis-1.0.xsd">
+
+	<!-- 以下是调用RedisConnection的publish方法的操作流程 -->
+	<!-- a) 客户端使用RedisConnection的publish方法，给一个指定的频道(channel)或样式(pattern)发送消息 -->
+	<!-- b) 在一个新线程中，RedisMessageListenerContainer找到所有监听这个频道的MessageListenerAdapter对象 -->
+	<!-- c) 对于每一个找到的MessageListenerAdapter对象，都把调用onMessage方法的这个任务提交给线程池 -->
+	<!-- d) 在新的线程中，MessageListenerAdapter的onMessage方法使用serializer，将收到的二进制消息转换成java对象， 
+		判断handleMessage中的哪个方法的第一个参数的类型可以和该对象的类型匹配，找到那个方法并调用。 -->
+	<!-- 总结就是：当发送消息后，只要有一个<redis:listener>符合发送的消息的topic，就在一个新线程中执行<redis:listener>。 -->
+
+	<!-- 注意：调用RedisConnection的publish方法后，后续的执行就是异步执行的了，因此客户端调用publish方法后，很快就会执行完该方法，继续执行后面代码 -->
+
+	<!-- topic-serializer属性用于对发送的消息的频道或模式进行反序列化的，默认值是StringRedisSerializer。一般来说也不需要改变，因为大部分情况下，在发布 
+		消息时，是通过使用字符串类型的频道名的getBytes()方法获取发送消息的频道的二进制数据的。 -->
+
+	<!-- task-executor属性用于指定执行订阅者的消息处理方法的线程池 -->
+
+	<!-- <redis:listener-container>就是要创建一个RedisMessageListenerContainer，而向<redis:listener-container>中注册<redis:listener> 
+		就是向这个创建的RedisMessageListenerContainer中注册MessageListenerAdapter -->
+	<redis:listener-container topic-serializer="stringSerializer"
+		connection-factory="redisConnection" task-executor="listenerInvocationExecutor">
+
+		<!-- <redis:listener>代表一个订阅者，serializer属性指定了它使用哪个RedisSerializer来对二进制格式的收到的消息进行反序列化处理，将二进制数据转换 
+			成java对象。然后将这个对象交由method所指定的方法来处理。 -->
+		<!-- 由于serializer属性只能设置一个值，因此每一个<redis:listener>肯定是将收到的消息转换成一种固定的类型 -->
+		<!-- 如果handleMessage方法有重载方法，那么MessageListenerAdapter会根据反序列化获取的java对象的类型来判断实际应该调用重载方法中的哪个方法。 
+			而如果handleMessage方法没有重载方法，那么如果反序列化获取的对象的类型无法和这个方法的第一个参数的类型匹配，那么就调用不了该订阅者方法了。 -->
+
+		<!-- 可以说： -->
+		<!-- <redis:listener>的topic决定了当发布一个消息后，当前这个<redis:listener>是否应该被执行 -->
+		<!-- serializer决定了即便<listener>应该被执行，那么是否能够调用method方法或者实际调用哪个method方法（在有方法重载的情况下） -->
+		<redis:listener ref="listener" method="handleMessage"
+			topic="test" serializer="jdkSerializer" />
+
+		<!-- topic是订阅的频道，可以是具体的频道名，也可以是一个模式。订阅多个频道中间可以以空格分割（注意不是逗号） -->
+		<!-- 注意：和redis中的模式名不同，spring-redis中的频道名只能使用*，不能使用?和[a-z]这种（已经测试过了） -->
+		<redis:listener ref="listener" method="handleMessage"
+			topic="t*t world hello" serializer="stringSerializer" />
+	</redis:listener-container>
+
+	<bean id="stringSerializer"
+		class="org.springframework.data.redis.serializer.StringRedisSerializer" />
+
+	<bean id="jdkSerializer"
+		class="org.springframework.data.redis.serializer.JdkSerializationRedisSerializer" />
+
+	<bean id="listener" class="com.spring.redis.listener.TestListener" />
+
+	<bean id="redisConnection"
+		class="org.springframework.data.redis.connection.jedis.JedisConnectionFactory">
+		<constructor-arg name="standaloneConfig">
+			<bean
+				class="org.springframework.data.redis.connection.RedisStandaloneConfiguration"
+				p:database="0" p:hostName="localhost" p:port="63790" />
+		</constructor-arg>
+	</bean>
+
+	<bean id="redisTemplate" class="org.springframework.data.redis.core.RedisTemplate"
+		p:connectionFactory-ref="redisConnection">
+		<property name="keySerializer">
+			<bean
+				class="org.springframework.data.redis.serializer.StringRedisSerializer" />
+		</property>
+		<property name="valueSerializer">
+			<bean
+				class="org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer"
+				c:type="com.spring.redis.data.domain.BaseDept" />
+		</property>
+	</bean>
+
+	<bean id="redisTemplate1" class="org.springframework.data.redis.core.RedisTemplate"
+		p:connectionFactory-ref="redisConnection">
+		<property name="keySerializer">
+			<bean
+				class="org.springframework.data.redis.serializer.StringRedisSerializer" />
+		</property>
+		<property name="valueSerializer">
+			<bean
+				class="org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer" />
+		</property>
+	</bean>
+
+	<bean id="conversionService"
+		class="org.springframework.format.support.FormattingConversionServiceFactoryBean"
+		p:registerDefaultFormatters="true" />
+
+	<bean id="stringRedisTemplate" class="org.springframework.data.redis.core.StringRedisTemplate"
+		p:connectionFactory-ref="redisConnection" />
+
+	<bean id="subscriptionExecutor"
+		class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor"
+		p:allowCoreThreadTimeOut="false" p:waitForTasksToCompleteOnShutdown="true"
+		p:awaitTerminationSeconds="120" p:corePoolSize="5" p:maxPoolSize="20"
+		p:queueCapacity="6" p:keepAliveSeconds="180"
+		p:rejectedExecutionHandler="#{new java.util.concurrent.ThreadPoolExecutor.DiscardOldestPolicy()}"
+		p:threadGroupName="redis-subscribers" p:threadNamePrefix="redis-sub-" />
+
+	<bean id="listenerInvocationExecutor"
+		class="org.springframework.scheduling.concurrent.ThreadPoolExecutorFactoryBean"
+		p:allowCoreThreadTimeOut="false" p:waitForTasksToCompleteOnShutdown="false"
+		p:corePoolSize="10" p:maxPoolSize="20" p:queueCapacity="8"
+		p:keepAliveSeconds="300" p:threadGroupName="listener-group"
+		p:threadNamePrefix="redis-listener-" />
+
+</beans>

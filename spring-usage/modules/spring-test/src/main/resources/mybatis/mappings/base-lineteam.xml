@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE  mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "../../schema/mybatis/mybatis-3-mapper.dtd">
+<mapper namespace="com.spring.data.dao.BaseLineTeamMapper">
+	<select id="queryAll" resultMap="lineTeam">
+		select * from ext_base_line_team
+	</select>
+
+	<resultMap type="BaseLineTeam" id="lineTeam">
+		<result property="groupNo" column="group_no" />
+		<result property="groupName" column="group_name" />
+		<result property="description" column="description" />
+		<association property="dept"
+			select="com.spring.data.dao.BaseDeptMapper.queryDept" column="dept_no" />
+	</resultMap>
+</mapper>

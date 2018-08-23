@@ -1,0 +1,44 @@
+bk:
+  id: ${random.int(1200,2000)}
+  name: 海底探险
+  alias:
+    - 海底冒险
+    - 海底知识百科
+    - 水中世界
+  #key的名称使用-分割
+  author-name: 阿明
+  #key的名称使用_分割
+  cor_Author:
+    - 詹姆斯
+    - 本杰明
+    - ${bk.cor_Author[0]} & ${bk.cor_Author[1]}
+  #key的名称既使用-分割，又使用_分割
+  SELL-PRI_CE: ￥23.59
+  #key的属性名可以不分大小写
+  publish-DATE: 2019-10-${random.int(1,31)}
+  PUBLISH-num: pub-num-19,499
+  category:
+    name: 百科
+    code: CA-1911
+    search-code: IDX-891
+    modify-date: 2017-10-09 23:55:${random.int(60)}
+  special-price:
+    BeiJing: 39.11
+    ShangHai: 28
+    TianJin: 15.99
+    ShanXi: ${bk.special-price.BeiJing}
+  special-category:
+    BeiJing:
+      name: 小说
+      code: CA-2023
+      search-code: IDX-77
+      modify-date: 2017-10-13 10:31:22
+    TianJin:
+      name: 武侠
+      code: CA-1991
+      SEA_RCH-CODE: IDX-15
+      MODIFY_DATE: 2016-05-20 13:11:22
+    ShangHai:
+      name: 游戏
+      CODE: ${bk.special-category.TianJin.code}
+      search-Code: IDX-10

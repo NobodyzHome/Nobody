@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+	<bean id="helloWorld"
+		class="org.springframework.web.servlet.view.json.MappingJackson2JsonView" />
+
+	<bean id="hello/json"
+		class="org.springframework.web.servlet.view.json.MappingJackson2JsonView">
+		<property name="attributes">
+			<value>
+				hello=wa ha ha
+				world=ha ya ya
+			</value>
+		</property>
+		<property name="prettyPrint" value="true" />
+	</bean>
+
+	<bean id="hello/xml"
+		class="org.springframework.web.servlet.view.xml.MappingJackson2XmlView">
+		<property name="attributes">
+			<value>
+				hi=hello
+				haha=world
+			</value>
+		</property>
+		<property name="prettyPrint" value="true" />
+		<property name="modelKey" value="hi" />
+	</bean>
+</beans>

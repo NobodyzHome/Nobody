@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "../../schema/mybatis/mybatis-3-mapper.dtd">
+<mapper namespace="com.spring.data.dao.mapper.BaseLineMapper">
+	<sql id="queryDynamicLine">
+		<bind name="columns"
+			value="new java.lang.String[]{'line_no','line_code','line_name','modify_time','is_run','dept_no'}" />
+
+		<include refid="com.spring.dynamic.dynamicQuery">
+			<property name="tableToQuery" value="base_line" />
+		</include>
+	</sql>
+
+	<select id="selectByExample" resultMap="lineMap">
+		<bind name="conditions"
+			value="#@java.util.HashMap@{'line_name':lineName,'line_code':lineCode,'line_no':lineNo,'modify_time':modifyDate,'is_run':isRun,'dept_no':@java.util.Objects@isNull(dept)?null:dept.deptNo}" />
+
+		<include refid="queryDynamicLine" />
+	</select>
+
+	<select id="selectById" resultMap="lineMap">
+		<bind name="conditions" value="#{'line_no':lineNoArray}" />
+		<include refid="queryDynamicLine" />
+	</select>
+
+	<select id="selectByCondition" resultMap="lineMap">
+		<bind name="conditions"
+			value="#{'line_name':lineName,'line_code':lineCode,'line_no':lineNo,'modify_time':modifyDate,'is_run':isRun,'dept_no':deptNo}" />
+
+		<include refid="queryDynamicLine" />
+	</select>
+
+	<resultMap type="BaseLine" id="baseLineMap">
+		<constructor>
+			<idArg column="line_no" javaType="int" />
+			<arg column="line_code" javaType="string" />
+			<arg column="line_name" javaType="string" />
+		</constructor>
+
+		<result column="is_run" property="isRun" />
+		<result column="modify_time" property="modifyDate" />
+	</resultMap>
+
+	<resultMap type="BaseLine" id="lineMap" extends="baseLineMap">
+		<association property="dept"
+			select="com.spring.data.dao.mapper.BaseDeptMapper.findById" column="{deptNo=dept_no}" />
+	</resultMap>
+
+	<!-- params:map,Map类型 -->
+	<insert id="insertByMap">
+		insert into base_line
+		<foreach collection="map.keySet()" item="columnName" open="("
+			close=")" separator=",">
+			${columnName}
+		</foreach>
+		values
+		<foreach collection="map.values()" item="columnValue" open="("
+			close=")" separator=",">
+			#{columnValue}
+		</foreach>
+	</insert>
+
+	<!-- params: 1.example,BaseLine类型 2.conditions,Map类型 -->
+	<update id="updateByExample">
+		<bind name="updateValues"
+			value="#{'line_no':example.lineNo,'line_code':example.lineCode,'line_name':example.lineName,'is_run':example.isRun,
+			'modify_time':example.modifyDate,'dept_no':@java.util.Objects@nonNull(example.dept)?example.dept.deptNo:null}" />
+
+		update base_line
+		<set>
+			<foreach collection="updateValues" index="columnName" item="columnValue"
+				separator=",">
+				<if test="@java.util.Objects@nonNull(columnValue)">
+					${columnName}=#{columnValue}
+				</if>
+			</foreach>
+		</set>
+
+		<include refid="com.spring.dynamic.dynamicCondition" />
+	</update>
+
+	<!-- parmas: 1.conditions,Map类型 -->
+	<delete id="deleteByConditions">
+		delete from base_line
+		<include refid="com.spring.dynamic.dynamicCondition" />
+	</delete>
+
+	<!-- params:1.lineNoArray,Integer[]类型 -->
+	<delete id="deleteById">
+		<bind name="conditions" value="#{'line_no':lineNoArray}" />
+
+		delete from base_line
+		<include refid="com.spring.dynamic.dynamicCondition" />
+	</delete>
+
+	<select id="callFunction" statementType="CALLABLE" useCache="false">
+		{#{cha,mode=OUT,javaType=int,jdbcType=INTEGER}=call
+		timestamp_cha(#{startTime},#{endTime})}
+	</select>
+
+	<select id="callProcedure" statementType="CALLABLE">
+		call
+		PK_FUN_BASIC.QUERY_LINE_INTERVAL(#{lineNo},#{updown},#{datetime},#{interval,mode=OUT,javaType=int,jdbcType=INTEGER},
+		#{errCode,mode=OUT,javaType=int,jdbcType=INTEGER},#{errMsg,mode=OUT,javaType=string,jdbcType=VARCHAR})
+	</select>
+
+	<select id="testCache" resultType="BaseLine" useCache="false">
+		<bind name="realLine"
+			value="lineNo+@org.apache.commons.lang3.RandomUtils@nextInt(1,3)" />
+		select * from base_line where line_no=#{realLine}
+	</select>
+
+	<select id="selectLineWithDept" resultMap="lineWithDeptMap">
+		select line.line_no,line.line_code,line.line_name,line.modify_time
+		line_modify_date,line.is_run
+		line_is_run,dept.dept_no,dept.dept_code,dept.dept_name,dept.modify_date
+		dept_modify_date,dept.is_run dept_is_run,dept.dept_level from
+		base_line line,base_dept
+		dept
+		<where>
+			and line.dept_no=dept.dept_no
+			and line.line_no=#{lineNo}
+		</where>
+	</select>
+
+	<resultMap type="BaseLine" id="lineWithDeptMap">
+		<constructor>
+			<idArg column="line_no" javaType="int" />
+			<arg column="line_code" javaType="string" />
+			<arg column="line_name" javaType="string" />
+		</constructor>
+
+		<result property="modifyDate" column="line_modify_date" />
+		<result property="isRun" column="line_is_run" />
+
+		<association property="dept" javaType="BaseDept">
+			<id property="deptNo" column="dept_no" />
+			<result property="deptCode" column="dept_code" />
+			<result property="deptName" column="dept_name" />
+			<result property="modifyDate" column="dept_modify_date" />
+			<result property="isRun" column="dept_is_run" />
+			<result property="deptLevel" column="dept_level" />
+		</association>
+	</resultMap>
+
+	<cache />
+</mapper>

@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:util="http://www.springframework.org/schema/util" xmlns:jdbc="http://www.springframework.org/schema/jdbc"
+	xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+	xmlns:tx="http://www.springframework.org/schema/tx" xmlns:cache="http://www.springframework.org/schema/cache"
+	xmlns:task="http://www.springframework.org/schema/task"
+	xsi:schemaLocation="http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-4.3.xsd
+		http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring-1.2.xsd
+		http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache-4.3.xsd
+		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.3.xsd">
+
+	<context:property-placeholder
+		file-encoding="UTF-8" ignore-resource-not-found="true"
+		ignore-unresolvable="false"
+		location="classpath:database/dataSource.cfg.properties,classpath:database/config/**/*.properties" />
+
+	<bean id="abstractDataSource" abstract="true"
+		class="org.apache.commons.dbcp2.BasicDataSource" p:initialSize="${dataSource.initialSize}"
+		p:maxTotal="${dataSource.maxTotal}" p:minIdle="${dataSource.minIdle}"
+		p:maxIdle="${dataSource.maxIdle}" p:maxConnLifetimeMillis="${dataSource.maxConnLifetimeMillis}"
+		p:defaultQueryTimeout="${dataSource.defaultQueryTimeout}"
+		p:maxWaitMillis="${dataSource.maxWaitMillis}" />
+
+	<bean id="mybatisSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean"
+		p:dataSource-ref="dataSource" p:configLocation="classpath:mybatis/mybatis-configuration.xml"
+		p:mapperLocations="classpath:mybatis/mappings/**/*.xml" />
+
+	<mybatis-spring:scan base-package="com.spring.data.dao.mapper" />
+
+	<bean id="transactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager"
+		p:dataSource-ref="dataSource" />
+
+	<bean id="hibernateSessionFactory"
+		class="org.springframework.orm.hibernate5.LocalSessionFactoryBean"
+		p:dataSource-ref="dataSource" p:configLocation="classpath:hibernate/hibernate.cfg.xml"
+		p:mappingLocations="classpath:hibernate/mappings/**/*-mapping.xml">
+		<property name="hibernateProperties">
+			<value>
+				hibernate.current_session_context_class=org.springframework.orm.hibernate5.SpringSessionContext
+			</value>
+		</property>
+	</bean>
+
+	<bean id="hibernateTransactionManager"
+		class="org.springframework.orm.hibernate5.HibernateTransactionManager"
+		p:sessionFactory-ref="hibernateSessionFactory" />
+
+	<context:component-scan
+		base-package="com.spring.data.service,com.spring.data.dao.hibernate" />
+	<tx:annotation-driven transaction-manager="transactionManager" />
+
+	<bean id="concurrentMapCacheManager"
+		class="org.springframework.cache.concurrent.ConcurrentMapCacheManager"
+		c:cacheNames="hello,world" p:allowNullValues="true" p:storeByValue="false" />
+
+	<bean id="ehCacheManager" class="org.springframework.cache.ehcache.EhCacheCacheManager">
+		<property name="cacheManager">
+			<bean class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean"
+				p:configLocation="classpath:ehcache.xml" p:cacheManagerName="ehcache" />
+		</property>
+	</bean>
+
+	<bean id="allEhcacheResolver"
+		class="org.springframework.cache.interceptor.NamedCacheResolver"
+		c:cacheManager-ref="ehCacheManager" c:cacheNames="dept,line">
+	</bean>
+
+	<bean id="allMapCacheResolver"
+		class="org.springframework.cache.interceptor.NamedCacheResolver"
+		c:cacheManager-ref="concurrentMapCacheManager" c:cacheNames="hello,world" />
+
+	<cache:annotation-driven cache-manager="concurrentMapCacheManager" />
+
+	<bean id="threadPoolExecutor"
+		class="org.springframework.scheduling.concurrent.ThreadPoolExecutorFactoryBean"
+		p:corePoolSize="5" p:queueCapacity="2" p:maxPoolSize="13"
+		p:keepAliveSeconds="120" p:allowCoreThreadTimeOut="false"
+		p:waitForTasksToCompleteOnShutdown="true" p:awaitTerminationSeconds="300"
+		p:threadGroupName="group1" p:threadNamePrefix="thread-pool-"
+		p:rejectedExecutionHandler="#{new java.util.concurrent.ThreadPoolExecutor.AbortPolicy()}" />
+
+	<bean id="syncTaskExecutor" class="org.springframework.core.task.SyncTaskExecutor" />
+
+	<bean id="simpleAsyncTaskExecutor" class="org.springframework.core.task.SimpleAsyncTaskExecutor"
+		p:concurrencyLimit="20" p:threadGroup="gp-simple" p:threadNamePrefix="simple-pool-" />
+
+	<bean id="concurrentTaskExecutor"
+		class="org.springframework.scheduling.concurrent.ConcurrentTaskExecutor">
+		<property name="concurrentExecutor" ref="threadPoolExecutor" />
+	</bean>
+
+	<bean id="threadPoolTaskExecutor"
+		class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor"
+		p:corePoolSize="5" p:queueCapacity="20" p:maxPoolSize="8"
+		p:allowCoreThreadTimeOut="false" p:keepAliveSeconds="60"
+		p:waitForTasksToCompleteOnShutdown="true" p:awaitTerminationSeconds="120"
+		p:rejectedExecutionHandler="#{new java.util.concurrent.ThreadPoolExecutor.DiscardOldestPolicy()}"
+		p:threadGroup="gp-task" p:threadNamePrefix="thread-pool-tasks-"
+		p:threadPriority="3" />
+
+	<task:executor id="taskExecutor" pool-size="5-21"
+		queue-capacity="12" keep-alive="300" rejection-policy="DISCARD" />
+
+	<bean id="scheduledThreadPoolExecutor"
+		class="org.springframework.scheduling.concurrent.ScheduledExecutorFactoryBean"
+		p:poolSize="15" p:continueScheduledExecutionAfterException="true"
+		p:threadGroup="scheduled1" p:threadNamePrefix="scheduled-executor-"
+		p:waitForTasksToCompleteOnShutdown="true" p:awaitTerminationSeconds="300" />
+
+	<bean id="concurrentTaskScheduler"
+		class="org.springframework.scheduling.concurrent.ConcurrentTaskScheduler"
+		p:scheduledExecutor-ref="scheduledThreadPoolExecutor"
+		p:concurrentExecutor-ref="taskExecutor" />
+
+	<bean id="threadPoolTaskScheduler"
+		class="org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler"
+		p:poolSize="10" p:waitForTasksToCompleteOnShutdown="true"
+		p:awaitTerminationSeconds="150" p:threadGroupName="schedlued-group"
+		p:threadNamePrefix="scheduled-" />
+
+	<task:scheduler id="taskScheduler" pool-size="3" />
+
+	<task:annotation-driven executor="taskExecutor"
+		scheduler="scheduledThreadPoolExecutor" exception-handler="uncaughtExceptionHandler" />
+
+	<bean id="uncaughtExceptionHandler"
+		class="com.spring.async.exception.handler.AsyncExceptionHandler" />
+
+	<beans profile="jiayuguan,!test">
+		<bean id="dataSource" parent="abstractDataSource" p:url="${db.jiayuguan.url}"
+			p:driverClassName="${db.jiayuguan.driver}" p:username="${db.jiayuguan.username}"
+			p:password="${db.jiayuguan.password}" destroy-method="close" />
+	</beans>
+
+	<beans profile="jingzhou">
+		<bean id="dataSource" parent="abstractDataSource" p:url="${db.jingzhou.url}"
+			p:driverClassName="${db.jingzhou.driver}" p:username="${db.jingzhou.username}"
+			p:password="${db.jingzhou.password}" destroy-method="close" />
+	</beans>
+
+	<beans profile="196test">
+		<bean id="dataSource" parent="abstractDataSource" p:url="${db.196test.url}"
+			p:driverClassName="${db.196test.driver}" p:username="${db.196test.username}"
+			p:password="${db.196test.password}" destroy-method="close" />
+	</beans>
+
+	<beans profile="embedded">
+		<jdbc:embedded-database id="dataSource" type="HSQL">
+			<jdbc:script location="classpath:database/sql/ddl/create_table_*.sql" />
+			<jdbc:script location="classpath:database/sql/dml/data_base_line.sql" />
+		</jdbc:embedded-database>
+
+		<jdbc:initialize-database data-source="dataSource">
+			<jdbc:script location="classpath:database/sql/dml/data_base_dept.sql" />
+			<jdbc:script location="classpath:database/sql/dml/data_base_terminal.sql" />
+		</jdbc:initialize-database>
+	</beans>
+
+	<beans profile="test">
+		<bean id="conversionService"
+			class="org.springframework.format.support.FormattingConversionServiceFactoryBean"
+			p:registerDefaultFormatters="true" />
+	</beans>
+</beans>

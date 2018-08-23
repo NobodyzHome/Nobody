@@ -1,0 +1,355 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:c="http://www.springframework.org/schema/c" xmlns:cache="http://www.springframework.org/schema/cache"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:mvc="http://www.springframework.org/schema/mvc" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache-4.3.xsd
+		http://www.springframework.org/schema/mvc http://www.springframework.org/schema/mvc/spring-mvc-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.3.xsd">
+
+	<mvc:annotation-driven conversion-service="conversionService"
+		content-negotiation-manager="contentNegotiationManager"
+		enable-matrix-variables="true" validator="validator">
+		<mvc:message-converters register-defaults="true">
+			<bean class="org.springframework.http.converter.StringHttpMessageConverter"
+				p:defaultCharset="#{T(java.nio.charset.Charset).defaultCharset()}" />
+			<bean
+				class="org.springframework.http.converter.ByteArrayHttpMessageConverter" />
+			<bean
+				class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter"
+				p:prettyPrint="true" />
+			<bean
+				class="org.springframework.http.converter.xml.MappingJackson2XmlHttpMessageConverter"
+				p:prettyPrint="true" />
+			<bean
+				class="org.springframework.http.converter.ResourceHttpMessageConverter" />
+			<bean
+				class="org.springframework.http.converter.ObjectToStringHttpMessageConverter"
+				c:defaultCharset="#{T(java.nio.charset.Charset).defaultCharset()}"
+				c:conversionService-ref="conversionService" />
+		</mvc:message-converters>
+	</mvc:annotation-driven>
+
+	<context:component-scan base-package="com.spring.web.controller" />
+
+	<bean id="conversionService"
+		class="org.springframework.format.support.FormattingConversionServiceFactoryBean"
+		p:registerDefaultFormatters="true" />
+
+	<bean id="dept" class="com.spring.data.domain.BaseDept" p:deptNo="No:1,321"
+		p:deptCode="1321" p:deptName="测试公司" p:isRun="off" p:modifyDate="2017-10-10 09:30:21"
+		scope="session" />
+
+	<bean class="com.spring.event.listener.ContextListener" />
+
+	<bean id="hello" class="java.lang.String" c:original="你好" scope="session" />
+	<bean id="world" class="java.lang.String" c:original="世界" scope="session" />
+
+	<!-- mvc:resource是把请求路径上的后续路径，拼到location中，然后使用HttpMessageConverter将指定路径的资源输出到目的端 -->
+	<mvc:resources location="WEB-INF/images/" mapping="/images/**" />
+	<mvc:resources location="WEB-INF/pages/" mapping="/pages/**/*.jsp" />
+	<mvc:resources location="WEB-INF/,classpath:,file:/Users/maziqiang/Downloads/"
+		mapping="/secret/**/*" />
+	<mvc:resources location="WEB-INF/scripts/" mapping="/scripts/**" />
+
+	<mvc:resources location="WEB-INF/styles/" mapping="/styles/**" />
+
+	<bean id="contentNegotiationManager"
+		class="org.springframework.web.accept.ContentNegotiationManagerFactoryBean">
+		<property name="mediaTypes">
+			<value>
+				xml=application/xml
+				json=application/json
+				txt=text/plain
+				html=text/html
+				htm=text/html
+			</value>
+		</property>
+
+		<property name="defaultContentType" value="text/plain" />
+		<property name="favorParameter" value="true" />
+		<property name="parameterName" value="present" />
+		<property name="favorPathExtension" value="true" />
+		<property name="ignoreAcceptHeader" value="true" />
+		<property name="ignoreUnknownPathExtensions" value="false" />
+	</bean>
+
+	<mvc:view-controller path="/base" view-name="basic/dept" />
+	<mvc:view-controller path="/test?/*.html"
+		view-name="test" />
+	<mvc:status-controller status-code="208"
+		path="/already/**/*" />
+	<!-- 使用该Controller进行响应的话，也是在响应报头上增加Location属性，告诉浏览器要再次发起请求的地址，但是注意此时status-code必须是3XX系列 
+		的响应码。因为浏览器只有接收到的响应码是3XX系列的，才会再次发起请求。 -->
+	<mvc:redirect-view-controller
+		redirect-url="/dispatcher/images/1.png" path="/redirect/**"
+		context-relative="true" status-code="301" keep-query-params="true" />
+
+	<mvc:view-controller path="/views/**" />
+
+	<!-- 关于DefaultServlet要注意的一点是，当将请求交由DefaultServletHttpRequestHandler处理时，它是直接使用DefaultServlet来输出请求路径 
+		在服务器中对应的资源文件。但DefaultServlet是直接把文件内容输出到目的端。例如如果请求的资源是jsp文件，那么是直接把jsp文件的内容输出到目的端， 
+		而不是使用这个jsp文件被编译成的Servlet，使用这个Servlet将内容输出到目的端。 -->
+	<mvc:default-servlet-handler />
+
+	<mvc:interceptors>
+		<!-- 增加一个有条件的HandlerInterceptor，只有对于符合要求的请求路径，才会在对应HandlerExecutionChain上增加这个HandlerInterceptor -->
+		<mvc:interceptor>
+			<!-- 当请求路径是这个路径时，会在HandlerExecutionChain上增加这个HandlerInterceptor -->
+			<mvc:mapping path="/basi?/**" />
+			<!-- 当请求路径是这个路径时，不会在HandlerExecutionChain上增加这个HandlerInterceptor -->
+			<mvc:exclude-mapping path="/basic/world.js" />
+			<!-- 该HandlerInterceptor会拦截所有非HandlerMethod的请求处理对象。如果请求处理对象不是HandlerMethod类型的，则不会使用HandlerAdapter 
+				来调用这个请求处理对象 -->
+			<bean class="com.spring.web.interceptor.OnlyHandlerMethodInterceptor" />
+		</mvc:interceptor>
+
+		<!-- 增加一个无条件的HandlerInterceptor，对于任意路径的请求，都会在HandlerExecutionchain中增加这个HandlerInterceptor -->
+		<bean class="com.spring.web.interceptor.LoggerHandlerInterceptor" />
+
+		<mvc:interceptor>
+			<mvc:mapping path="/locale/**" />
+			<mvc:mapping path="/**/*?heme*/**" />
+			<mvc:exclude-mapping path="/nonLocale/**" />
+			<bean class="org.springframework.web.servlet.i18n.LocaleChangeInterceptor"
+				p:paramName="locale" />
+		</mvc:interceptor>
+
+		<bean class="org.springframework.web.servlet.theme.ThemeChangeInterceptor"
+			p:paramName="theme" />
+	</mvc:interceptors>
+
+	<bean id="messageSource"
+		class="org.springframework.context.support.ResourceBundleMessageSource"
+		p:basenames="i18n/validation/error,i18n/validation/message,i18n/validation/field,i18n/validation/exception"
+		p:alwaysUseMessageFormat="true"
+		p:defaultEncoding="#{T(java.nio.charset.StandardCharsets).UTF_8.name()}"
+		p:fallbackToSystemLocale="true" p:useCodeAsDefaultMessage="false" />
+
+	<bean id="validator"
+		class="org.springframework.validation.beanvalidation.OptionalValidatorFactoryBean"
+		p:validationMessageSource-ref="messageSource" />
+
+	<bean id="multipartResolver"
+		class="org.springframework.web.multipart.support.StandardServletMultipartResolver" />
+
+	<bean id="localeResolver"
+		class="org.springframework.web.servlet.i18n.CookieLocaleResolver"
+		p:cookieName="localeInfo" />
+
+	<!-- SimpleMappingExceptionResolver的流程 -->
+	<!-- 1.根据类名去exceptionMappings属性中寻找该类名对应的viewName -->
+	<!-- 2.如果没有找到viewName，则使用defaultErrorView的值作为找到的viewName -->
+	<!-- 3.根据找到的viewName去statusCodes属性中寻找该viweName对应的响应状态码 -->
+	<!-- 4.如果没有找到响应状态码，则使用defaultStatusCode的值作为找到的响应状态码 -->
+	<!-- 5.使用找到的viewName和statsCode来生成ModelAndView对象 -->
+
+	<!-- 注意：如果没有设置defaultErrorView属性的话，那么当从exceptionMappings中找不到该类名对应的viewName时，则不会创建ModelAndView对象， 
+		此时spring则会委派下一个HandlerExceptionResolver来解析异常。也就是说如果设置了defaultErrorView属性，那么SimpleMappingExceptionResolver 
+		肯定会返回一个ModelAndView对象，也就轮不到后面的HandlerExceptionResolver来解析异常了，因此此时SimpleMappingExceptionResolver应该放到 
+		HandlerExceptionResolver集合的最后面。 -->
+	<bean id="simpleExceptionResolver"
+		class="org.springframework.web.servlet.handler.SimpleMappingExceptionResolver">
+		<property name="exceptionMappings">
+			<value>
+				ToManyDataException=show/user
+				NoDataException=jsonView
+			</value>
+		</property>
+
+		<property name="statusCodes">
+			<value>
+				show/user=#{T(org.springframework.http.HttpStatus).NON_AUTHORITATIVE_INFORMATION.value()}
+				jsonView=#{T(org.springframework.http.HttpStatus).SERVICE_UNAVAILABLE.value()}
+			</value>
+		</property>
+
+		<!-- 赋值order=5，是为了把SimpleMappingExceptionResolver放到默认注册的HandlerExceptionResolver对象的后面 -->
+		<property name="order" value="5" />
+
+		<!-- 注意：一旦设置了defaultErrorView属性，那么代表由SimpleMappingExceptionResolver处理异常时，肯定会创建出一个ModelAndView对象， 
+			也就是说肯定就不需要后面的HandlerExceptionResolver来处理异常了。所以SimpleMappingExceptionResolver通常放在 
+			HandlerExceptionResolver集合的最后 -->
+
+		<!-- defaultErrorView用于控制，当无法根据正处理的类的类名，从exceptionMappings属性中找到对应的viewName时， 
+			则使用defaultErrorView属性值作为逻辑视图名 -->
+		<!-- 注意：defaultErrorView属性值可以给出任意逻辑视图名，而非只能是exceptionMappings提出的逻辑视图名 -->
+		<property name="defaultErrorView" value="hello/main" />
+
+		<!-- defaultStatusCode用于控制，当无法根据逻辑视图名来从statusCodes找到响应状态码时，则使用defaultStatusCode属性值 
+			作为响应状态码 -->
+		<property name="defaultStatusCode"
+			value="#{T(org.springframework.http.HttpStatus).HTTP_VERSION_NOT_SUPPORTED.value()}" />
+	</bean>
+
+	<bean id="themeResolver"
+		class="org.springframework.web.servlet.theme.CookieThemeResolver"
+		p:cookieName="themeInfo" />
+
+	<bean id="themeSource"
+		class="org.springframework.ui.context.support.ResourceBundleThemeSource"
+		p:basenamePrefix="i18n/theme/" />
+
+	<beans profile="traditionalViews">
+		<!-- InternalResourceViewResolver和其他ViewResolver的区别在于：InternalResourceViewResolver是根据viewName创建View对象， 
+			而其他ViewResolver是根据viewName来筛选View对象。这就意味着InternalResourceViewResolver对于任何传进来的viewName，都会创建 
+			一个View对象，而其他ViewResolver只有在根据viewName检索到View对象时，才会返回一个View对象。 -->
+		<bean id="internalResourceViewResolver"
+			class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+			<property name="prefix" value="/WEB-INF/pages/" />
+			<property name="suffix" value=".jsp" />
+			<property name="exposeContextBeansAsAttributes" value="true" />
+			<property name="attributes">
+				<value>
+					hi=hello
+					heido=beybey
+				</value>
+			</property>
+			<property name="order">
+				<util:constant static-field="org.springframework.core.Ordered.LOWEST_PRECEDENCE" />
+			</property>
+		</bean>
+
+		<bean id="beanNameViewResolver"
+			class="org.springframework.web.servlet.view.BeanNameViewResolver"
+			p:order="-20" />
+
+		<bean id="xmlViewResolver" class="org.springframework.web.servlet.view.XmlViewResolver"
+			p:location="classpath:spring/views/xml/view1.xml" p:order="-35" />
+
+		<bean id="resourceBundleViewResolver"
+			class="org.springframework.web.servlet.view.ResourceBundleViewResolver"
+			p:basename="spring/views/properties/view1" p:order="-10" />
+
+		<!-- ContentNegotiationViewResolver的总体流程是：1.使用聚合的ViewResolver，依次解析viewName，获取View对象的集合。 
+			2.根据请求实际需要的媒体类型（取决于ContentNegotiationManager），从这个View对象的集合中返回首个符合这个媒体类型的View对象。 -->
+		<bean id="contentNegotiationViewResolver"
+			class="org.springframework.web.servlet.view.ContentNegotiatingViewResolver">
+			<property name="contentNegotiationManager" ref="contentNegotiationManager" />
+			<property name="order">
+				<util:constant static-field="org.springframework.core.Ordered.HIGHEST_PRECEDENCE" />
+			</property>
+			<property name="useNotAcceptableStatusCode" value="true" />
+			<property name="defaultViews">
+				<set>
+					<bean id="defaultJson"
+						class="org.springframework.web.servlet.view.json.MappingJackson2JsonView">
+						<property name="attributes">
+							<props>
+								<prop key="hebe">田馥甄</prop>
+								<prop key="jay">周杰伦</prop>
+							</props>
+						</property>
+						<property name="modelKeys">
+							<set>
+								<value>hebe</value>
+								<value>jay</value>
+								<value>time</value>
+							</set>
+						</property>
+					</bean>
+					<bean id="defaultXml"
+						class="org.springframework.web.servlet.view.xml.MappingJackson2XmlView">
+						<property name="attributes">
+							<props>
+								<prop key="mayday">五月天</prop>
+								<prop key="lion">狮子合唱团</prop>
+							</props>
+						</property>
+						<property name="modelKey" value="mayday" />
+					</bean>
+				</set>
+			</property>
+		</bean>
+
+		<bean id="jsonView"
+			class="org.springframework.web.servlet.view.json.MappingJackson2JsonView">
+			<property name="attributes">
+				<value>
+					zhangsan=lala
+					lisi=haha
+					zhaowu=papa
+				</value>
+			</property>
+			<property name="exposePathVariables" value="true" />
+		</bean>
+
+		<bean id="xmlView"
+			class="org.springframework.web.servlet.view.xml.MappingJackson2XmlView">
+			<property name="attributes">
+				<props>
+					<prop key="datetime">#{new java.util.Date()}</prop>
+				</props>
+			</property>
+			<property name="modelKey" value="datetime" />
+		</bean>
+	</beans>
+
+	<beans profile="modernViews">
+		<mvc:view-resolvers>
+			<mvc:content-negotiation use-not-acceptable="true">
+				<mvc:default-views>
+					<bean id="defaultJson"
+						class="org.springframework.web.servlet.view.json.MappingJackson2JsonView">
+						<property name="attributes">
+							<props>
+								<prop key="yuguofei">于国飞</prop>
+								<prop key="wangtianlong">王天龙</prop>
+							</props>
+						</property>
+					</bean>
+					<bean id="defaultXml"
+						class="org.springframework.web.servlet.view.xml.MappingJackson2XmlView">
+						<property name="attributes">
+							<value>
+								username=slkdjfsdf
+								password=zcxczxczxc
+							</value>
+						</property>
+						<property name="modelKey" value="username" />
+					</bean>
+				</mvc:default-views>
+			</mvc:content-negotiation>
+
+			<mvc:bean-name />
+
+			<bean id="xmlViewResolver" class="org.springframework.web.servlet.view.XmlViewResolver"
+				p:location="classpath:spring/views/xml/view2.xml" p:order="-20" />
+
+			<bean id="resourceBundleViewResolver"
+				class="org.springframework.web.servlet.view.ResourceBundleViewResolver"
+				p:basename="spring/views/properties/view2" p:order="-50" />
+
+			<!-- 拼接的方式是：/web项目根目录 + prefix + viewName + suffix -->
+			<mvc:jsp prefix="/WEB-INF/pages/" suffix=".jsp" />
+		</mvc:view-resolvers>
+
+		<bean id="json"
+			class="org.springframework.web.servlet.view.json.MappingJackson2JsonView" />
+
+		<bean id="xml"
+			class="org.springframework.web.servlet.view.xml.MappingJackson2XmlView"
+			p:modelKey="hello" />
+
+		<bean id="url"
+			class="org.springframework.web.servlet.view.InternalResourceView"
+			p:url="/WEB-INF/pages/err.jsp" />
+
+		<bean id="test.json"
+			class="org.springframework.web.servlet.view.json.MappingJackson2JsonView">
+			<property name="attributes">
+				<value>
+					hi=hello
+					listen=ting
+					ho=yoyo
+				</value>
+			</property>
+			<property name="exposePathVariables" value="true" />
+		</bean>
+	</beans>
+</beans>

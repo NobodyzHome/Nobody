@@ -1,0 +1,92 @@
+server:
+  port: 9999
+spring:
+  profiles:
+    # 多个值也可以使用集合的方式配置
+    active:
+    - student
+    # 多个值之间可以用逗号分隔
+    #active: student,dept
+
+    # spring.profiles.include指定的profile才会被追加到已激活的profile中，而不是覆盖已激活的profile
+    include:
+    - dept
+    - book
+
+  # 如果不配置静态资源的路径匹配，那么默认的匹配路径为"/**"
+  # 注意：即使配置了静态资源的匹配路径，也还是会有spring boot提供的/webjars/**的匹配路径
+  mvc:
+    static-path-pattern: /**
+    content-negotiation:
+      favor-parameter: true
+      parameter-name: formatter
+      # spring boot 默认舍去了根据url的后缀来进行请求的Accept的判断
+      favor-path-extension: false
+      # 可以额外设置后缀和媒体类型的对应
+      media-types:
+        txt: text/plain
+        jsss: application/json
+        xmmm: application/xml
+
+  resources:
+    chain:
+      strategy:
+        content:
+          enabled: false
+          paths: /**
+    # 如果不配置静态资源的访问位置，那么默认的访问路径为classpath:static/,classpath:public/,classpath:resources/,
+    static-locations:
+    - classpath:hello/
+    - classpath:world/
+
+  # Comma-separated list of basenames
+  messages:
+    basename: i18n/message,i18n/error
+
+  data:
+    mongodb:
+      database: test
+      host: localhost
+      port: 27017
+
+      repositories:
+        type: imperative
+
+config:
+  allow: test
+  deny: haha
+
+teacher:
+  id: No-1,9${random.int(10,100)}
+  name: 李老师
+  sex: 女
+  birthDay: 2018-${random.int(8)}-05 18:30:55
+  comments:
+  - 教学认真
+  - 人好
+  - 有责任心
+  - 硕士
+  - 班主任
+  students:
+  - id: ${random.int(2000)}
+    age: ${random.int(10,17)}
+    name: 张三
+    sex: 男
+    alias:
+    - ${teacher.students[0].name}
+    - 小张
+    - 张张
+    address:
+      postCode: 300${random.int(100,1000)}
+      province: 北京
+      address: 朝林广场
+      otherPostCodes:
+      - 300000
+      - 300381
+  - id: 192
+    age: 11
+    name: 李四
+    sex: 女
+    address:
+      province: BJ
+      address: 朝阳门外大街

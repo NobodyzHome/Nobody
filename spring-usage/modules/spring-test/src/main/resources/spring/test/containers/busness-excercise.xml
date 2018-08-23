@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:c="http://www.springframework.org/schema/c" xmlns:cache="http://www.springframework.org/schema/cache"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:task="http://www.springframework.org/schema/task" xmlns:util="http://www.springframework.org/schema/util"
+	xmlns:jdbc="http://www.springframework.org/schema/jdbc" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:mybatis-spring="http://mybatis.org/schema/mybatis-spring"
+	xsi:schemaLocation="http://www.springframework.org/schema/jdbc http://www.springframework.org/schema/jdbc/spring-jdbc-4.3.xsd
+		http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache-4.3.xsd
+		http://mybatis.org/schema/mybatis-spring http://mybatis.org/schema/mybatis-spring-1.2.xsd
+		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd
+		http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-4.3.xsd">
+
+	<context:property-placeholder
+		file-encoding="UTF-8" ignore-resource-not-found="true"
+		ignore-unresolvable="false" location="classpath:database/*.properties" />
+
+	<bean id="abstractDataSource" abstract="true"
+		class="org.apache.commons.dbcp2.BasicDataSource" p:initialSize="${datasource.default.initialSize}"
+		p:maxTotal="${datasource.default.maxTotal}" p:minIdle="${datasource.default.minIdle}"
+		p:maxIdle="${datasource.default.maxIdle}" p:maxConnLifetimeMillis="${datasource.default.maxConnLifetimeMillis}"
+		p:defaultQueryTimeout="${datasource.default.defaultQueryTimeout}"
+		p:maxWaitMillis="${datasource.default.maxWaitMillis}" />
+
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean"
+		autowire="byName" p:configLocation="classpath:mybatis/mybatis-configuration.xml"
+		p:mapperLocations="classpath:mybatis/mappings/*.xml" />
+
+	<mybatis-spring:scan base-package="com.spring.data.dao" />
+
+	<bean id="dataSourceTransactionManager"
+		class="org.springframework.jdbc.datasource.DataSourceTransactionManager"
+		p:dataSource-ref="dataSource" />
+
+	<bean id="deptService" class="com.spring.data.service.BaseDeptService" />
+
+	<tx:annotation-driven transaction-manager="dataSourceTransactionManager"
+		order="-5" />
+
+	<bean id="ehCacheManager" class="org.springframework.cache.ehcache.EhCacheCacheManager">
+		<property name="cacheManager">
+			<bean class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean"
+				p:configLocation="classpath:ehcache/ehcache1.xml" />
+		</property>
+	</bean>
+
+	<bean id="concurrentCacheManager"
+		class="org.springframework.cache.concurrent.ConcurrentMapCacheManager"
+		c:cacheNames="hello,world" />
+
+	<bean id="ehCacheResolver"
+		class="org.springframework.cache.interceptor.NamedCacheResolver"
+		c:cacheManager-ref="ehCacheManager" c:cacheNames="dept,line" />
+
+	<cache:annotation-driven cache-manager="ehCacheManager"
+		order="-10" />
+
+	<bean id="threadPoolTaskExecutor"
+		class="org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor"
+		p:corePoolSize="5" p:maxPoolSize="20" p:queueCapacity="15"
+		p:rejectedExecutionHandler="#{new java.util.concurrent.ThreadPoolExecutor.AbortPolicy()}"
+		p:keepAliveSeconds="60" p:waitForTasksToCompleteOnShutdown="true"
+		p:awaitTerminationSeconds="129" p:threadNamePrefix="task-executor-"
+		p:threadGroupName="gp" p:threadPriority="5" />
+
+	<bean id="threadPoolTaskScheduler"
+		class="org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler"
+		p:poolSize="10"
+		p:rejectedExecutionHandler="#{new java.util.concurrent.ThreadPoolExecutor.DiscardOldestPolicy()}"
+		p:waitForTasksToCompleteOnShutdown="false" p:threadNamePrefix="task-scheduler-" />
+
+	<bean id="asyncExceptionHandler"
+		class="com.spring.async.exception.handler.CommonAsyncExcepionHandler" />
+
+	<!-- 为什么task:annotation-driver没有order属性？因为AsyncExecutionInterceptor肯定会被插入到连接点方法对应的责任链的第一位 
+		，也就是一上来就将推动责任链向后调用的执行使用一个新线程来执行。 -->
+	<task:annotation-driven executor="threadPoolTaskExecutor"
+		scheduler="threadPoolTaskScheduler" exception-handler="asyncExceptionHandler" />
+
+	<bean id="dataSourceLogger" class="com.spring.aop.logger.DataSourceLogger" />
+
+	<aop:config expose-proxy="true">
+		<aop:pointcut
+			expression="execution(public java.sql.Connection javax.sql.DataSource.getConnection(..) 
+			throws java.sql.SQLException) and target(target) and this(proxy)"
+			id="dataSourceConnectionMethods" />
+
+		<aop:aspect ref="dataSourceLogger">
+			<aop:before method="logBeforeConnection" pointcut-ref="dataSourceConnectionMethods"
+				arg-names="target,proxy" />
+			<aop:after method="logAfterConnection" pointcut-ref="dataSourceConnectionMethods"
+				arg-names="target,proxy" />
+			<aop:after-returning method="logAfterReturningConnection"
+				pointcut-ref="dataSourceConnectionMethods" returning="connection"
+				arg-names="connection,target,proxy" />
+			<aop:after-throwing method="logOnSqlException"
+				pointcut-ref="dataSourceConnectionMethods" throwing="ex"
+				arg-names="ex,target,proxy" />
+			<aop:around method="logAround" pointcut-ref="dataSourceConnectionMethods"
+				arg-names="target,proxy" />
+		</aop:aspect>
+	</aop:config>
+
+	<aop:aspectj-autoproxy expose-proxy="true" />
+
+	<bean class="com.spring.aop.logger.TransactionManagerLogger" />
+
+	<bean id="messageSource"
+		class="org.springframework.context.support.ResourceBundleMessageSource"
+		p:basename="i18n/validation/err" />
+
+	<bean id="validator"
+		class="org.springframework.validation.beanvalidation.OptionalValidatorFactoryBean"
+		p:validationMessageSource-ref="messageSource" />
+
+	<bean
+		class="org.springframework.validation.beanvalidation.MethodValidationPostProcessor"
+		p:validator-ref="validator" />
+
+	<bean id="conversionService"
+		class="org.springframework.format.support.FormattingConversionServiceFactoryBean">
+		<property name="registerDefaultFormatters" value="true" />
+		<property name="formatters">
+			<bean class="org.springframework.format.datetime.DateFormatter"
+				p:pattern="yyyy-MM-dd" />
+		</property>
+	</bean>
+
+	<beans profile="embedded,default">
+		<jdbc:embedded-database id="dataSource" type="HSQL">
+			<jdbc:script encoding="UTF-8" execution="INIT"
+				location="classpath:sql/embedded/table_create/*_schema.sql" />
+			<jdbc:script encoding="UTF-8" execution="INIT"
+				location="classpath:sql/embedded/data/*.sql" />
+		</jdbc:embedded-database>
+	</beans>
+
+	<beans profile="test196,testDefault">
+		<bean id="dataSource" parent="abstractDataSource" destroy-method="close"
+			p:url="${db.test.196.url}" p:driverClassName="${db.test.196.driverClassName}"
+			p:username="${db.test.196.username}" p:password="${db.test.196.password}" />
+	</beans>
+
+	<beans profile="jiayuguan,runDefault">
+		<bean id="dataSource" parent="abstractDataSource" destroy-method="close"
+			p:url="${db.jiayuguan.url}" p:driverClassName="${db.jiayuguan.driverClassName}"
+			p:username="${db.jiayuguan.username}" p:password="${db.jiayuguan.password}" />
+	</beans>
+</beans>

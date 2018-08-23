@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:task="http://www.springframework.org/schema/task" xmlns:cache="http://www.springframework.org/schema/cache"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache-4.3.xsd
+		http://www.springframework.org/schema/task http://www.springframework.org/schema/task/spring-task-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd">
+
+	<!-- 注册一个ThreadPoolTaskExecutor和ThreadPoolTaskScheduler -->
+	<task:executor id="taskExecutor" keep-alive="150"
+		pool-size="2-6" queue-capacity="1" rejection-policy="CALLER_RUNS" />
+	<task:scheduler id="taskScheduler" pool-size="5" />
+
+	<bean id="taskService" class="com.spring.task.service.TaskCompositeService" />
+
+	<!-- 让容器开启对容器中bean的@Scheduled和@Async方法的支持，即对这些bean产生代理，在连接点方法对应的责任链中增加通知对象 -->
+	<!-- exception-handler引用的是一个AsyncUncaughtExceptionHandler类型的实例 -->
+	<task:annotation-driven executor="taskExecutor"
+		scheduler="taskScheduler" proxy-target-class="true" exception-handler="asyncExceptionHandler" />
+
+	<!-- 设置一个用于处理执行异步任务时发生的异常时的Handler -->
+	<bean id="asyncExceptionHandler" class="com.spring.task.exception.CommonExceptionHandler" />
+
+	<task:scheduled-tasks>
+		<task:scheduled ref="taskService" method="scheduleTask3"
+			fixed-rate="5000" />
+	</task:scheduled-tasks>
+
+	<bean id="cacheManager"
+		class="org.springframework.cache.concurrent.ConcurrentMapCacheManager"
+		c:cacheNames="hello,world" p:allowNullValues="true" />
+
+	<bean id="cacheResolver"
+		class="org.springframework.cache.interceptor.NamedCacheResolver"
+		c:cacheManager-ref="cacheManager" c:cacheNames="hello,world" />
+
+	<cache:annotation-driven cache-manager="cacheManager" />
+
+	<bean class="com.spring.task.aop.TaskMethodLogger" />
+
+	<!-- 让容器开启对AspectJ注解的支持，将容器中的<bean>中含有AspectJ注解的通知方法织入到容器中对应的<bean>的方法中 -->
+	<aop:aspectj-autoproxy />
+
+	<bean id="messageSource"
+		class="org.springframework.context.support.ResourceBundleMessageSource"
+		p:basename="i18n/validation/message" />
+
+	<bean id="validator"
+		class="org.springframework.validation.beanvalidation.OptionalValidatorFactoryBean"
+		p:validationMessageSource-ref="messageSource" />
+
+	<bean id="methodValidation"
+		class="org.springframework.validation.beanvalidation.MethodValidationPostProcessor"
+		p:validator-ref="validator" />
+</beans>

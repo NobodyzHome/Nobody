@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE  mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "../../schema/mybatis/mybatis-3-mapper.dtd">
+<mapper namespace="com.spring.data.dao.BaseDeptMapper">
+	<select id="queryDepts" resultMap="deptBasic">
+		select * from base_dept where
+		dept_name like #{deptName}
+	</select>
+
+	<select id="queryDept" resultMap="deptBasic" useCache="false">
+		select *
+		from base_dept where
+		dept_no = #{deptNo}
+	</select>
+
+	<select id="queryDeptAndLine" resultMap="deptWithLines">
+		select
+		a.dept_no,a.dept_code,a.dept_name,a.modify_date,a.is_run,b.line_no,b.line_code,b.line_name,b.is_run
+		line_is_run,b.modify_date line_modify_date
+		from base_dept a,base_line b
+		where a.dept_no=b.dept_no
+
+		<if test="@java.util.Objects@nonNull(deptNo)">
+			and a.dept_no=#{deptNo}
+		</if>
+	</select>
+
+	<select id="queryDeptSelectLines" resultMap="deptSelectLines">
+		select * from
+		base_dept where dept_no=#{deptNo}
+	</select>
+
+	<resultMap type="BaseDept" id="deptBasic">
+		<constructor>
+			<idArg javaType="integer" column="dept_no" />
+			<arg javaType="string" column="dept_code" />
+		</constructor>
+
+		<result property="deptName" column="dept_name" />
+		<result property="isRun" column="is_run" />
+		<result property="modifyDate" column="modify_date" />
+	</resultMap>
+
+	<resultMap type="BaseDept" id="deptWithLines" extends="deptBasic">
+		<collection property="lines" ofType="BaseLine">
+			<id property="lineNo" column="line_no" />
+			<result property="lineCode" column="line_code" />
+			<result property="lineName" column="line_name" />
+			<result property="isRun" column="line_is_run" />
+			<result property="modifyDate" column="line_modify_date" />
+		</collection>
+	</resultMap>
+
+	<resultMap type="BaseDept" id="deptSelectLines" extends="deptBasic">
+		<!-- column="{deptNo=dept_no}"代表给collection中的select语句传入的参数名是deptNo，参数值是当前数据的dept_no列的值 -->
+		<collection property="lines"
+			select="com.spring.data.dao.BaseLineMapper.queryLineByDept" column="{deptNo=dept_no}" />
+	</resultMap>
+
+	<cache />
+</mapper>

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:c="http://www.springframework.org/schema/c"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:cache="http://www.springframework.org/schema/cache"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd">
+
+	<import resource="classpath:spring/validation.xml" />
+	<import resource="classpath*:spring/data-access.xml" />
+
+	<context:component-scan base-package="com.spring.cache.jdk" />
+
+	<bean id="cacheManager"
+		class="org.springframework.cache.concurrent.ConcurrentMapCacheManager">
+		<property name="cacheNames">
+			<set>
+				<value>dept_region</value>
+				<value>line_region</value>
+				<value>date_region</value>
+			</set>
+		</property>
+	</bean>
+
+	<bean id="cacheResolver"
+		class="org.springframework.cache.interceptor.SimpleCacheResolver"
+		p:cacheManager-ref="cacheManager" />
+
+	<bean id="conversionService"
+		class="org.springframework.format.support.FormattingConversionServiceFactoryBean"
+		p:registerDefaultFormatters="true" />
+
+	<bean id="dept" class="com.spring.data.domain.BaseDept"
+		p:deptNo="第#{T(org.apache.commons.lang3.RandomUtils).nextInt(1, 3000)}号"
+		p:deptCode="##{T(org.apache.commons.lang3.RandomUtils).nextInt(1, 3000)}"
+		p:deptName="测试公司" p:isRun="#{T(org.apache.commons.lang3.RandomUtils).nextBoolean()}"
+		p:modifyDate="2017/10/11 13:29:11" scope="prototype" />
+
+	<cache:advice cache-manager="cacheManager" id="cacheAdvice">
+		<cache:caching>
+			<cache:cacheable cache="dept_region"
+				condition="T(java.util.Objects).nonNull(#dept.deptNo) and #dept.deptNo gt 0"
+				key="#dept.deptNo" method="cacheAbleService" unless="#dept.deptNo == 9999" />
+			<cache:cacheable cache="date_region" method="cacheAbleService2"
+				key="#date.time" />
+			<cache:cache-evict cache="dept_region" method="clearSpecificCache"
+				before-invocation="false" all-entries="false" />
+			<cache:cache-evict cache="dept_region" method="clearAllCache"
+				before-invocation="true" all-entries="true" />
+			<cache:cache-put cache="dept_region" method="forceUpdateCache"
+				condition="#deptNo gt 0 and #isRun == true" key="#deptNo" />
+		</cache:caching>
+
+		<cache:caching>
+			<cache:cache-evict cache="dept_region" method="clearThenPutCache"
+				before-invocation="true" key="#dept.deptNo" />
+			<cache:cache-put cache="dept_region" method="clearThenPutCache"
+				key="#dept.deptNo" />
+		</cache:caching>
+	</cache:advice>
+
+	<aop:config expose-proxy="true">
+		<aop:advisor advice-ref="cacheAdvice" pointcut="bean(concurrentMapCacheService)" />
+	</aop:config>
+</beans>	

@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:c="http://www.springframework.org/schema/c" xmlns:cache="http://www.springframework.org/schema/cache"
+	xmlns:context="http://www.springframework.org/schema/context" xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/cache http://www.springframework.org/schema/cache/spring-cache-4.3.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.3.xsd">
+
+	<import resource="classpath*:spring/data-access.xml" />
+
+	<bean id="jdkCacheManager"
+		class="org.springframework.cache.concurrent.ConcurrentMapCacheManager"
+		p:allowNullValues="true" c:cacheNames="hello,world,test" />
+
+	<!-- 创建spring的CacheManager -->
+	<bean id="ehCacheManager" class="org.springframework.cache.ehcache.EhCacheCacheManager">
+		<property name="cacheManager">
+			<!-- 创建ehcache2自己的CacheManager -->
+			<bean class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean"
+				p:configLocation="classpath:ehcache/ehcache3.xml" />
+		</property>
+	</bean>
+
+	<!-- 把所有spring的CacheManager自动装配到CompositeCacheManager中 -->
+	<bean id="compositeCacheManager" class="org.springframework.cache.support.CompositeCacheManager"
+		autowire="constructor" p:fallbackToNoOpCache="true" />
+
+	<!-- 为了防止循环注入，因此将该CacheManager设置成不是自动装配的候选者。 -->
+	<!-- （在创建CompositeCacheManager时，通过自动装配，需要先创建TransactionAwareCacheManagerProxy，而TransactionAwareCacheManagerProxy在创建 
+		时，需要先创建CompositeCacheManager并注入到targetCacheManager属性中，导致循环注入） -->
+
+	<!-- TransactionAwareCacheManagerProxy可以代理一个CacheManager，将这个CacheManager所产生的Cache对象封装成TransactionAwareCacheDecorator 
+		对象。这个对象是Cache的代理，它在实现put、evict方法时，会判断当前线程是否开启了事务，如果开启了，那么put、evict方法的实现是注册一个事务任务到当前 
+		线程所开启的事务中，这个事务任务在事务管理器进行事务提交后，才会让被代理的Cache对象真正执行put、evict方法。而如果当前线程没有开启事务，那么 
+		TransactionAwareCacheDecorator的put、evict方法就是直接执行被代理的Cache对象的put、evict方法。 -->
+	<!-- 因此，当希望在事务真正提交时，目标方法的返回结果才会被保存到Cache中或从Cache中清除，而事务回退时，目标方法产生的结果不会对Cache产生影响，那么此时应使用 
+		TransactionAwareCacheManagerProxy。由它产生的Cache，在执行put或evict操作，只有在事务提交时，才会真正执行。 -->
+	<!-- 注意：如果使用TransactionAwareCacheManagerProxy的话，那么责任链的通知对象集合中，TransactionInterceptor要在CacheInterceptor 
+		的前面，这样是先调用TransactionInterceptor开启事务，然后执行CacheInterceptor时，TransactionAwareCacheManagerProxy创建的Cache在执行put、evict 
+		方法时，才会注册一个事务任务到当前线程所开启的事务中。 -->
+	<bean id="transactionalCacheManager"
+		class="org.springframework.cache.transaction.TransactionAwareCacheManagerProxy"
+		c:targetCacheManager-ref="compositeCacheManager" autowire-candidate="false" />
+
+	<bean id="logger" class="com.spring.cache.aop.MethodLogger1" />
+
+	<cache:advice id="transactionalCacheAdvice" cache-manager="transactionalCacheManager">
+		<cache:caching>
+			<cache:cacheable method="queryDept"
+				cache="dept_region,date_region,hello" key="#condition.deptNo"
+				condition="#condition.deptNo lt 9999" unless="T(org.apache.commons.lang3.ArrayUtils).isEmpty(#result)" />
+			<cache:cache-evict method="updateDept"
+				cache="dept_region,world,date_region,hello" condition="#result gt 0"
+				all-entries="true" before-invocation="false" />
+			<cache:cache-evict method="deleteDept"
+				cache="dept_region,date_region,hello,world" condition="#result gt 0"
+				before-invocation="false" all-entries="true" />
+		</cache:caching>
+	</cache:advice>
+
+	<aop:config expose-proxy="true">
+		<aop:pointcut
+			expression="execution(@org.springframework.transaction.annotation.Transactional public * 
+			(@org.springframework.stereotype.Service com.spring.data.service..*Service).*(..))"
+			id="transactionalServiceMethods" />
+
+		<aop:advisor advice-ref="transactionalCacheAdvice"
+			pointcut-ref="transactionalServiceMethods" />
+
+		<aop:aspect ref="logger">
+			<aop:before method="logBeforeInvocation"
+				pointcut="execution(@org.springframework.transaction.annotation.Transactional public * 
+			(@org.springframework.stereotype.Service com.spring.data.service..*Service).*(..)) and target(target) and this(proxy)"
+				arg-names="target,proxy" />
+
+			<aop:after-throwing method="logOnException"
+				pointcut-ref="transactionalServiceMethods" throwing="ex" arg-names="ex" />
+		</aop:aspect>
+	</aop:config>
+</beans>

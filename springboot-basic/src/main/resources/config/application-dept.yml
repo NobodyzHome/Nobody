@@ -1,0 +1,46 @@
+dept:
+  deptNo: 123
+  deptCode: No.123
+  deptName: 123公司
+  modifyDate: 2018-10-31 10:50:33
+  notes:
+    - 张三
+    - 李四
+    - 王五
+    - 赵六
+  #以下展示了为List<BaseLine> lines属性赋值时，配置文件的内容的给出方式
+  lines:
+    - lineNo: 999
+      lineCode: No.999
+      lineName: 999线路
+      modifyDate: 2018-10-05 09:20:33
+      notes:
+        - 车多
+        - 人多
+        - 空调车
+    - lineNo: 891
+      lineCode: No.891
+      lineName: 891线路
+      notes:
+        - 发车间隔小
+        - 车少
+    - lineNo: 609
+      lineCode: No.609
+      lineName: 609路
+      modifyDate: 2017-06-19 11:23:55
+      notes:
+        - 老人多
+        - 空调车
+        - 车费贵
+        - 站点多
+
+line:
+  lineNo: No:3,619
+  lineCode: line619
+  lineName: 619线路
+  modifyDate: 2017-11-19 19:28:51
+  notes:
+    - 人少
+    - 车多
+    - 有空调
+    - 发车间隔小

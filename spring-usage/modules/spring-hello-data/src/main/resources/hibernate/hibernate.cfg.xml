@@ -1,0 +1,16 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<hibernate-configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://www.hibernate.org/xsd/orm/cfg"
+	xsi:schemaLocation="http://www.hibernate.org/xsd/orm/cfg ../schema/hibernate/legacy-configuration-4.0.xsd">
+	<session-factory>
+		<property name="format_sql">true</property>
+		<property name="show_sql">true</property>
+		<property name="cache.use_second_level_cache">true</property>
+		<property name="cache.region.factory_class">org.hibernate.cache.ehcache.EhCacheRegionFactory</property>
+		<property name="cache.use_query_cache">true</property>
+		<property name="cache.query_cache_factory">org.hibernate.cache.internal.StandardQueryCacheFactory</property>
+
+		<class-cache usage="nonstrict-read-write" class="com.spring.data.domain.BaseDept"
+			region="dept" />
+	</session-factory>
+</hibernate-configuration>
