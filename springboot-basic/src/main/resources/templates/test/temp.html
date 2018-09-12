@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    <table th:fragment="showStu(students,title)">
+        <thead>
+            <tr>
+                <th th:colspan="${students.size()}" th:utext="${title}?:_">学生情况</th>
+            </tr>
+            <tr>
+                <th>学生编号</th>
+                <th>学生性别</th>
+                <th>学生名称</th>
+                <th>学生年龄</th>
+                <th>日期</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="stu : ${students}" th:object="${stu}" th:styleappend="${stuStat.odd}?'background-color: silver':''">
+                <td th:text="${stuStat.count}"></td>
+                <td th:text="*{sex}?:未知"></td>
+                <td th:inline="text">[[${stu.lineName}]]</td>
+                <td th:text="*{age}?:_">无</td>
+                <td th:text="*{#dates.format(birthDay,'yyyy-MM-dd HH:mm:ss')}"></td>
+            </tr>
+        </tbody>
+    </table>
+</body>
+</html>

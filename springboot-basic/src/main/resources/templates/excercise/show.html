@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="|${hello}-${world}|"></title>
+    <script th:src="@{/dispatch/webjars/jquery/jquery.js}" type="text/javascript"></script>
+    <script th:src="@{/dispatch/jsLib/test1.js}"></script>
+    <script type="text/javascript">
+        var hello = [[${hello}]];
+        var age = [[${student.age}]];
+        var hasAge = [[${student.age}? true : false]];
+        var testNull = [[${isNull}]];
+    </script>
+</head>
+<body>
+<h1 th:with="maxScore=9000,score=${T(org.apache.commons.lang3.RandomUtils).nextInt(1000, maxScore)}"
+    th:text="#{welcome.prompt(马,0,${new java.util.Date()},${score},${score}/${maxScore})}"></h1>
+<table th:id="${hello}" th:if="${studentList}" th:class="tb" th:classappend="${world}?enable:disable">
+    <tr>
+        <th>序号</th>
+        <th>学生编号</th>
+        <th>学生姓名</th>
+        <th>学生性别</th>
+        <th>日期</th>
+    </tr>
+    <tr th:each="theStudent:${studentList}" th:style="${theStudentStat.odd?'background-color:silver':''}"
+        th:object="${theStudent}">
+        <td>[[${theStudentStat.count}]]</td>
+        <td th:text="*{id}"></td>
+        <td th:text="${theStudent.lineName}?:_">未知</td>
+        <td th:text="*{sex}"></td>
+        <td th:text="*{#dates.format(birthDay,'yyyy-MM-dd')}"></td>
+    </tr>
+</table>
+<div th:replace="~{test/temp :: showStu(${maleStudents},欢迎查看男学生信息)}"></div>
+<div th:insert="~{test/welcome :: h1}"></div>
+<div th:inline="text">
+    字母是：
+    [# th:each="cha : ${hello.toCharArray()}"]
+    [[|${cha}(${chaStat.count}/${chaStat.size})|]],
+    [/]
+</div>
+<table style="border:solid 1px;" th:styleappend="|width:${studentList.size()*5}px;height:${studentList.size()*10}|"
+       th:attr="class=|${hello} ${world}|,id=test+${maleStudents.size()},lineName=${student.lineName}"
+       th:attrappend="class=${people.lineName},title=${#dates.format(date,'yyyyMMdd')}"
+       th:with="studentFields=${T(com.springboot.data.domain.Student).declaredFields}">
+    <thead>
+    <tr>
+        <td th:colspan="${studentFields.length+1}" th:text="${student.lineName}"></td>
+    </tr>
+    <tr>
+        <th th:text="#{field.num(${studentList.size()})}"></th>
+        <th th:each="field : ${studentFields}" th:text="#{${'student.'+field.lineName}}"></th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="student : ${studentList}"
+        th:styleappend="${studentStat.odd}?'background-color: silver':''">
+        <td th:inline="text">[[|${studentStat.count}/${studentStat.size}|]]</td>
+        <td th:each="field : ${studentFields}"
+            th:text="${T(org.apache.commons.lang3.reflect.FieldUtils).readField(field, student, true)}">
+        </td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>

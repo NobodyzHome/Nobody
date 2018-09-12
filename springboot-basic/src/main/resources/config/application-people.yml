@@ -1,0 +1,38 @@
+config:
+  people:
+    age: No-2,911
+    name: 张${random.int(10)}
+    remark: ${random.value}
+    tags:
+      - 人好
+      - 有责任心
+      - 有${random.int(5,20)}辆车
+      - 美颜
+    maps:
+      WangWu:
+        id: 101
+        age: 20
+        name: 王五
+        sanWei:
+          - 80
+          - 51
+          - 99
+      Zhaoliu:
+        id: 90
+        age: 55
+        name: 李四
+        sanWei:
+          - 99
+          - 51
+          - 80
+        address:
+          postCode: 22
+          province: 51
+        birthDay: 2019-10-30 17:50:28
+        identifyNo: 第9,811位学生
+        friendsNo:
+          Lili: 2811
+          WeiWei: 2992
+          YoYo: 2777
+          DaDa: 2900
+    modifyDate: 2018-05-25

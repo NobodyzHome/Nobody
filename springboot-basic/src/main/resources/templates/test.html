@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <title>Title</title>
-    <script type="text/javascript" th:inline="javascript" th:src="@{/jsLib/test.js}"></script>
     <script type="text/javascript" th:inline="javascript">
         var viewName = '[[|${view}123${students.size()}|]]';
         alert(viewName);
     </script>
     <style type="text/css" th:inline="css">
         div.btn {
-            font-size: [[ 2 *${students.size()} ]] pt;
+            font-size: [ [ 2 *${students.size()} ] ] pt;
         }
     </style>
 </head>
@@ -19,7 +18,7 @@
 <!-- th:text就是用表达式的计算结果替换到元素体内。以下面这行来说，就是把${wawa}的计算结果替换到<p>内部 -->
 <p th:text="${wawa}"></p>
 <div th:object="${student}">
-    <p th:text="*{name}"></p>
+    <p th:text="*{lineName}"></p>
     <p th:text="*{age}"></p>
     <p th:text="*{sex}"></p>
     <p th:text="*{alias[0]}"></p>
@@ -44,10 +43,26 @@
 <!--在#{}中不传参的情况-->
 <p th:text="#{welcome.mainPage.title}"></p>
 <!--在#{}中传参，也就是将参数传给对应MessageFormat的情况。注意：在#{}里也能用${}-->
-<p th:text="#{NotNull.java.lang.String(${'用户信息123'.concat(@testController.student.name).concat(view)})}"></p>
+<p th:text="#{NotNull.java.lang.String(${'用户信息123'.concat(@testController.student.lineName).concat(view)})}"></p>
 <p th:text="#{welcome.mainPage.user('张三',${T(org.apache.commons.lang3.RandomUtils).nextInt(1,3000)},6500,0.78)}"></p>
-<img th:src="@{/images/1.png}"
+
+<p th:text="${view}+' hello '+${student.lineName}+' world!'"></p>
+<p th:text="|${view} hello ${student.lineName} world|"></p>
+
+<p style="color:indianred">
+    @{}中的路径如果是绝对路径，那么计算出来的结果会带着项目的根目录（即context-path），但不会带着该DispatcherServlet对应的url-pattern。</br>
+    例如：当前项目的根目录是/springboot，而当前DispatcherServlet的url-pattern是/dispatch，那么@{/images/1.png}计算出来的值是
+    /springboot/images/1.png，而不是/springboot/dispatcher/images/1.png。
+</p>
+<img th:src="@{/dispatch/images/1.png}"
      th:title="${T(org.apache.commons.lang3.time.DateFormatUtils).format(new java.util.Date(),'yyyy-MM-dd')}"/>
+
+<p style="color:indianred">
+    如果@{}中以~开头，那么计算出来的结果不会自动带着根目录，也就是可以由用户指定要访问的项目的根目录。</br>
+    例如@{/images/1.png}，那么计算出来的结果会自动带着当前项目的根目录，即localhost:9999/springboot/images/1.png。而如果@{~/usr/images/1.png}，
+    那么计算出来的结果就是localhost:9999/usr/images/1.png，切换了要访问的项目。
+</p>
+<img th:src="@{~/usr/images/1.png}"/>
 
 <p style="color:indianred">
     使用th:replace来将当前元素替换成指定模版的元素，可以看到这里将< h1 >替换成了< div >。
@@ -78,7 +93,7 @@
     2.~{templateName}，将指定的模版文件的内容都引用过来</br>
     3.~{::selector}，相当于~{this::selctor}</br>
 </p>
-<span th:insert="~{@{test/welcome} :: h1}"></span>
+<span th:insert="~{/test/welcome :: h1}"></span>
 
 <p>
     在定义模版时，可以给模版增加参数，然后模版内部可以使用${}来使用参数。（例如：th:fragement="welcome(param1,param2)"）</br>
@@ -98,16 +113,25 @@
 </div>
 <p th:text="|Welcome ${view}|">hello</p></br>
 <input type="checkbox" th:checked="${view.length()==4}"/></br>
-<input type="text" value="nice" name="txt" th:disabled="10 < 5"/></br>
-<input type="text" name="txt1" th:value="(true? 张三:李四) + ${view}"/></br>
+<input type="text" value="nice" lineName="txt" th:disabled="10 < 5"/></br>
+<input type="text" lineName="txt1" th:value="(true? 张三:李四) + ${view}"/></br>
+
+<p th:text="_">欢迎！</p>
+<!-- 如果${view123}为null，则返回无操作符，使用<span>内原来的文本 -->
 <span th:text="${view123}?:_">请输入用户：</span></br>
+
 <div th:text="'<b>Hello World</b>'"></div>
 <div th:utext="'<b>Hello World</b>'"></div>
-<div th:styleappend="|heigth:${20*20}px;border:solid ${1*2}px|" style="width:200px;"
+
+<div th:styleappend="|heigth:${20*20}px;border:solid ${1*2}px|" th:style="'width:'+(10*20)+'px;'"
      th:text="'欢迎来到王者荣耀'+${new String('哈哈!')}"></div>
 <div th:styleappend="|width:${20*20}px;height:${15*20}px|" th:text="${view123}?:_" style="border: solid 1px;">娃哈哈</div>
+<div class="abc " th:classappend="${view}?enable:disable"></div>
+
 <p th:text="((20*20)-15>200?'张三':'李四') + 19 * 10 + '啦啦'"></p>
-<div class=" btn " th:attrappend="class=${view123}?'enable':'disable'">欢迎</div>
+
+<div th:attr="class=${view123}?enable:disable,width=(20 * 20)+px"></div>
+<div class=" btn " th:attrappend="class=${view123}?'enable':'disable',width=(20*20)+px">欢迎</div>
 <div class=" btn " th:attrprepend="class=${view123}?'enable':'disable'">啦啦</div>
 <p style="color:indianred">
     在spel的语法中，条件判断中的表达式的值必须为boolean类型的。例如if(),三元表达式中的判断表达式的返回值都必须是boolean类型的。<br/>
@@ -124,17 +148,18 @@
 <p th:text="'no'?'123':'456'"></p>
 
 <p style="color:indianred">
-    在使用th:each遍历时，会为遍历的变量创建一个额外的变量，这个变量以Stat结尾。这个变量代表当前遍历的这个元素的状态，包括索引位置、是否是奇数位置、是否是偶数位置等等。<br/>
+    在使用th:each遍历时，会为遍历的变量创建一个额外的变量，这个变量以Stat结尾。这个变量代表当前遍历的这个元素的状态，包括索引位置、是否是奇数位置
+    、是否是偶数位置等等。<br/>
     例如：th:each="student : ${students}"，用于遍历的变量是student，那么会同时创建一个名为studentStat的变量，使用studentStat.index获取索引位置，
     使用studentStat.count获取计数（从1开始），使用studentStat.odd判断当前遍历的元素的位置（从1开始）是否为奇数。<br/>
 </p>
 <ul>
     <!-- 注意：th:不仅可以对已有属性进行计算，还可以对自定义的属性进行计算，例如可以对th:pos这个自定义属性进行计算 -->
     <li th:each="student : ${students}" th:pos="${studentStat.index}"
-        th:text="|${student.name}(${studentStat.count}/${studentStat.size} ${studentStat.odd?'奇数队':'偶数队'})|"></li>
+        th:text="|${student.lineName}(${studentStat.count}/${studentStat.size} ${studentStat.odd?'奇数队':'偶数队'})|"></li>
 </ul>
-<select name="student">
-    <option th:each="student : ${students}" th:text="|${student.name}(${studentStat.count}/${studentStat.size})|"
+<select lineName="student">
+    <option th:each="student : ${students}" th:text="|${student.lineName}(${studentStat.count}/${studentStat.size})|"
             th:value="${student.id}"
             th:selected="${studentStat.last}"></option>
 </select>
@@ -143,7 +168,7 @@
 <p th:text="${view123}">haha</p>
 
 <p style="color:indianred">如果th:if的表达式返回false，则不会输出这个元素</p>
-<h5 th:if="${students123}" th:each="student : ${students}" th:text="${student.name+','+student.age}"></h5>
+<h5 th:if="${students123}" th:each="student : ${students}" th:text="${student.lineName+','+student.age}"></h5>
 
 <p style="color:indianred">如果th:unless的表达式返回false，则会输出这个元素</p>
 <table th:unless="${students123}">
@@ -154,7 +179,7 @@
     </tr>
     <tr th:each="student : ${students}">
         <td th:text="${studentStat.count}"></td>
-        <td th:text="${student.name}"></td>
+        <td th:text="${student.lineName}"></td>
         <td th:text="${student.age}?:_">未知</td>
     </tr>
 </table>
@@ -178,15 +203,42 @@
 <div><b>Message is : [[|${view}123${students.size()}|]]</b></div>
 <div th:inline="text">
     [# th:each="student : ${students}"]
-    [[|${student.name}(${studentStat.count}/${studentStat.size})|]]
+    [[|${student.lineName}(${studentStat.count}/${studentStat.size})|]]
     [[${student.age}?:年龄未知]]
     [/]
     </br>
     [# th:if="${students}"]
     有数据[[${T(java.text.DateFormat).getDateTimeInstance().format(new java.util.Date())}]]
     [/]
-    [[${htmlContents}]]
-    [(${htmlContents})]
+</div>
+<div th:inline="text">
+    Message is [[${htmlContents}]]</br>
+    Message is [(${htmlContents})]
+</div>
+<!-- 如果给出了th:object，那么元素里使用这个对象的属性，都可以直接以*{属性名}的方式来获取th:object中的对象的属性值 -->
+<table th:object="${student}" style="border:solid 1px">
+    <tr>
+        <th>学生编号：*{id}</th>
+        <th>学生编号：${student.id}</th>
+        <th>学生姓名：*{lineName}</th>
+        <th>学生姓名：${student.lineName}</th>
+    </tr>
+    <tr>
+        <!-- 以下这两种方式是相同的 -->
+        <td th:text="*{id}"></td>
+        <td th:text="${student.id}"></td>
+        <td th:text="*{lineName}"></td>
+        <td th:text="${student.lineName}"></td>
+    </tr>
+</table>
+<p th:inline="none">如果在th:inline中给出none，那么Thymeleaf不会检测内容中的[[${view}}]]和[(${view}})]，不会对里面的内容进行计算，而是直接显示</p>
+<div th:replace="~{/test/welcome :: h1}"></div>
+
+<div th:with="view=${view}?:'未知',time=|当前时间：${T(java.text.DateFormat).getDateInstance().format(new java.util.Date())}|
+,welcome=提示+#{welcome.mainPage.user(张三,1231,3500,0.95)}" th:inline="text">
+    [[${view}]]</br>
+    [[${time}]]</br>
+    [[${welcome}]]
 </div>
 </body>
 </html>

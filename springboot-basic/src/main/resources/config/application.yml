@@ -1,5 +1,11 @@
 server:
   port: 9999
+  servlet:
+    # 用于配置当前应用的context-path，默认是"/"
+    context-path: /springboot
+    # 用于配置当前DispatcherServlet这个Servlet的url-pattern，默认是"/"
+    path: /dispatch
+
 spring:
   profiles:
     # 多个值也可以使用集合的方式配置
@@ -12,6 +18,7 @@ spring:
     include:
     - dept
     - book
+    - people
 
   # 如果不配置静态资源的路径匹配，那么默认的匹配路径为"/**"
   # 注意：即使配置了静态资源的匹配路径，也还是会有spring boot提供的/webjars/**的匹配路径
@@ -26,7 +33,9 @@ spring:
       media-types:
         txt: text/plain
         jsss: application/json
+        json: application/json
         xmmm: application/xml
+        xml: application/xml
 
   resources:
     chain:
@@ -41,16 +50,16 @@ spring:
 
   # Comma-separated list of basenames
   messages:
-    basename: i18n/message,i18n/error
+    basename: i18n/message,i18n/error,i18n/field
 
   data:
     mongodb:
-      database: test
+      database: site
       host: localhost
       port: 27017
-
       repositories:
         type: imperative
+
 
 config:
   allow: test

@@ -20,22 +20,23 @@ import java.util.List;
 public class MvcConfig implements WebMvcConfigurer {
 
     // 如果配置中有HttpMessageConverters，那么这个HttpMessageConverters的@Bean会覆盖spring boot默认的HttpMessageConverter配置
-    @Bean
-    public HttpMessageConverters converters() {
-        List<HttpMessageConverter<?>> converterList = new ArrayList<>();
-        converterList.add(new StringHttpMessageConverter());
-        // 如果在创建HttpMessageConverters时，传入第一个参数为false，就代表不添加默认的HttpMessageConverter
-        HttpMessageConverters converters = new HttpMessageConverters(false, converterList);
+//    @Bean
+//    public HttpMessageConverters converters() {
+//        List<HttpMessageConverter<?>> converterList = new ArrayList<>();
+//        converterList.add(new StringHttpMessageConverter());
+//        // 如果在创建HttpMessageConverters时，传入第一个参数为false，就代表不添加默认的HttpMessageConverter
+//        HttpMessageConverters converters = new HttpMessageConverters(false, converterList);
+//
+//        return converters;
+//    }
 
-        return converters;
-    }
     // 如果配置中有HttpMessageConverter的@Bean，那么容器会把这个HttpMessageConverter添加到当前的已注册的HttpMessageConverter的列表中
     // 注意：如果配置中也有HttpMessageConverters的@Bean，那么就会覆盖了当前这个HttpMessageConverter的配置
-    @Bean
-    public HttpMessageConverter<?> converter() {
-        MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter = new MappingJackson2HttpMessageConverter();
-        return mappingJackson2HttpMessageConverter;
-    }
+//    @Bean
+//    public HttpMessageConverter<?> converter() {
+//        MappingJackson2HttpMessageConverter mappingJackson2HttpMessageConverter = new MappingJackson2HttpMessageConverter();
+//        return mappingJackson2HttpMessageConverter;
+//    }
 
     @Bean
     public LocaleResolver localeResolver() {

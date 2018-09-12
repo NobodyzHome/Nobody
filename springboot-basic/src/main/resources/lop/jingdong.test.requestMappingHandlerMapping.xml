@@ -1,0 +1,28 @@
+<lop>
+  <service lineName="com.springboot.web.config.MvcConfigure" version="1.0" group="alias">
+    <method lineName="requestMappingHandlerMapping" restName="jingdong.test.requestMappingHandlerMapping" znName="requestMappingHandlerMapping" desc="" auth="false" argIndex="请替换为合法值" attrName="请替换为合法值">
+      <result>
+        <element type="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping" lineName="result" webParmer="result" desc="请替换为恰当的中文描述" systemValue="" defaultValue="" required="false">
+          <element type="boolean" lineName="useSuffixPatternMatch" webParmer="useSuffixPatternMatch" desc="请替换为恰当的中文描述" systemValue="" defaultValue="" required="false"/>
+          <element type="boolean" lineName="useRegisteredSuffixPatternMatch" webParmer="useRegisteredSuffixPatternMatch" desc="请替换为恰当的中文描述" systemValue="" defaultValue="" required="false"/>
+          <element type="boolean" lineName="useTrailingSlashMatch" webParmer="useTrailingSlashMatch" desc="请替换为恰当的中文描述" systemValue="" defaultValue="" required="false"/>
+          <element type="org.springframework.web.accept.ContentNegotiationManager" lineName="contentNegotiationManager" webParmer="contentNegotiationManager" desc="请替换为恰当的中文描述" systemValue="" defaultValue="" required="false"/>
+          <element type="org.springframework.util.StringValueResolver" lineName="embeddedValueResolver" webParmer="embeddedValueResolver" desc="请替换为恰当的中文描述" systemValue="" defaultValue="" required="false"/>
+          <element type="org.springframework.web.servlet.mvc.method.RequestMappingInfo.BuilderConfiguration" lineName="config" webParmer="config" desc="请替换为恰当的中文描述" systemValue="" defaultValue="" required="false">
+            <element type="org.springframework.web.util.UrlPathHelper" lineName="urlPathHelper" webParmer="urlPathHelper" desc="请替换为恰当的中文描述" systemValue="" defaultValue="" required="false">
+              <element type="boolean" lineName="alwaysUseFullPath" webParmer="alwaysUseFullPath" desc="请替换为恰当的中文描述" systemValue="" defaultValue="" required="false"/>
+              <element type="boolean" lineName="urlDecode" webParmer="urlDecode" desc="请替换为恰当的中文描述" systemValue="" defaultValue="" required="false"/>
+              <element type="boolean" lineName="removeSemicolonContent" webParmer="removeSemicolonContent" desc="请替换为恰当的中文描述" systemValue="" defaultValue="" required="false"/>
+              <element type="java.lang.String" lineName="defaultEncoding" webParmer="defaultEncoding" desc="请替换为恰当的中文描述" systemValue="" defaultValue="" required="false"/>
+            </element>
+            <element type="org.springframework.util.PathMatcher" lineName="pathMatcher" webParmer="pathMatcher" desc="请替换为恰当的中文描述" systemValue="" defaultValue="" required="false"/>
+            <element type="boolean" lineName="trailingSlashMatch" webParmer="trailingSlashMatch" desc="请替换为恰当的中文描述" systemValue="" defaultValue="" required="false"/>
+            <element type="boolean" lineName="suffixPatternMatch" webParmer="suffixPatternMatch" desc="请替换为恰当的中文描述" systemValue="" defaultValue="" required="false"/>
+            <element type="boolean" lineName="registeredSuffixPatternMatch" webParmer="registeredSuffixPatternMatch" desc="请替换为恰当的中文描述" systemValue="" defaultValue="" required="false"/>
+            <element type="org.springframework.web.accept.ContentNegotiationManager" lineName="contentNegotiationManager" webParmer="contentNegotiationManager" desc="请替换为恰当的中文描述" systemValue="" defaultValue="" required="false"/>
+          </element>
+        </element>
+      </result>
+    </method>
+  </service>
+</lop>

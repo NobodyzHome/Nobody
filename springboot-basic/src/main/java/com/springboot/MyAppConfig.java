@@ -21,7 +21,7 @@ import org.springframework.context.annotation.PropertySource;
     然后根据这个类型上的@ConfigurationProperties，使用对应的配置文件中的内容，给该bean的属性进行赋值
 */
 @EnableConfigurationProperties({Student.class, BaseDept.class, BaseLine.class
-        , BaseTerminal.class, BaseEmployee.class, Teacher.class, Book.class})
+        , BaseTerminal.class, BaseEmployee.class, Teacher.class, Book.class, People.class})
 
 //@PropertySource中提供的配置文件必须是固定路径，不能包含通配符
 @PropertySource({"classpath:config/terminal.properties"})
