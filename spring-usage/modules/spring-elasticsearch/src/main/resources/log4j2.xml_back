@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- status属性用于控制把哪些log4j2构件输出的日志输出到控制台 -->
+<Configuration status="debug" strict="false">
+    <Properties>
+        <Property name="LOG.PATH">D:/logs/spring-usage</Property>
+        <Property name="LOG.PATTERN">[%p][%d{yyyy-MM-dd HH:mm:ss.SSS}]%m[%c:%M]%n</Property>
+    </Properties>
+
+    <Appenders>
+        <!-- 对应ConsoleAppender -->
+        <Console target="SYSTEM_OUT" bufferedIo="true" bufferSize="1000" immediateFlush="false"
+                 name="consoleAppender">
+            <PatternLayout pattern="${LOG.PATTERN}"></PatternLayout>
+        </Console>
+
+        <!-- 对应RollingRandomAccessFileAppender -->
+        <RollingRandomAccessFile name="infoAppender" filePattern="${LOG.PATH}/info-%i.log"
+                                 fileName="${LOG.PATH}/info.log" append="true" bufferedIo="true"
+                                 bufferSize="1000">
+            <!-- 配置RollingRandomAccessFileAppender时，如果不配置TriggeringPolicy，则无法打印出文件 -->
+            <SizeBasedTriggeringPolicy size="1MB"></SizeBasedTriggeringPolicy>
+            <PatternLayout pattern="[%p]-[%d{yyyy-MM-dd HH:mm:ss}]-%m[%C.%M(%L)]-%r"></PatternLayout>
+            <ThresholdFilter level="warn" onMatch="DENY" onMismatch="ACCEPT"/>
+        </RollingRandomAccessFile>
+
+        <!-- 对应FileAppender -->
+        <File fileName="${LOG.PATH}/error.log" append="false"
+              bufferedIo="true" name="errorAppender" bufferSize="2000" immediateFlush="true">
+            <PatternLayout pattern="${LOG.PATTERN}"></PatternLayout>
+            <!-- 以下这个配置使当前Appender只输出warn以上的输出 -->
+            <ThresholdFilter level="warn" onMatch="ACCEPT" onMismatch="DENY"/>
+        </File>
+
+        <RandomAccessFile name="springAppender" fileName="${LOG.PATH}/spring.log" append="true" bufferedIo="true"
+                          bufferSize="1000" immediateFlush="true">
+            <PatternLayout pattern="${LOG.PATTERN}"></PatternLayout>
+            <!-- 这个判断的实际处理是，如果输出等级大于等于info，那么就是onMatch，否则就是onMismatch。也就是这个输出器过滤了info以下的日志输出 -->
+            <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"/>
+        </RandomAccessFile>
+    </Appenders>
+
+    <Loggers>
+        <!-- 一个Logger可以包含多个Appender，而每个Appender都有过滤功能，可以过滤不同级别的日志的输出 -->
+        <Root level="error">
+            <AppenderRef ref="consoleAppender"/>
+            <AppenderRef ref="infoAppender"/>
+            <AppenderRef ref="errorAppender"/>
+        </Root>
+
+        <!-- additivity="true"代表当使用这个logger输出以后，会使用RootLogger再输出一次。当给RootLogger进行输出时，不会再用RootLogger上的level再进行判断，而是直接使用RootLogger进行输出。 -->
+        <Logger name="org.springframework" level="debug" additivity="true">
+            <AppenderRef ref="springAppender"/>
+        </Logger>
+
+        <!-- 这个Logger的additivity=false，也就是说使用这个logger进行输出后，不会让RootLogger再输出 -->
+        <Logger name="com.spring.es" level="warn" additivity="false">
+            <AppenderRef ref="errorAppender"/>
+            <AppenderRef ref="consoleAppender"/>
+        </Logger>
+
+        <Logger name="test" level="trace" additivity="true">
+            <AppenderRef ref="consoleAppender"/>
+            <AppenderRef ref="infoAppender"/>
+        </Logger>
+    </Loggers>
+</Configuration>

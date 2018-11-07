@@ -2,10 +2,12 @@ package com.spring.data.domain;
 
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import org.springframework.data.elasticsearch.annotations.Document;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.util.Date;
 
+@Document(indexName = "student")
 public class Student {
 
     private Integer id;

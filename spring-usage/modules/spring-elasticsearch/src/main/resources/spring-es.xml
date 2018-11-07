@@ -2,14 +2,22 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xmlns:elasticsearch="http://www.springframework.org/schema/data/elasticsearch"
-       xmlns:p="http://www.springframework.org/schema/p" xmlns:c="http://www.springframework.org/schema/c"
+       xmlns:c="http://www.springframework.org/schema/c"
        xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/data/elasticsearch http://www.springframework.org/schema/data/elasticsearch/spring-elasticsearch.xsd">
 
-    <elasticsearch:transport-client id="client" cluster-name="elasticsearch" cluster-nodes="127.0.0.1:9200"/>
+    <!-- 1.cluster-name给出了集群的名称 -->
+    <!-- 2.cluster-nodes是初始情况下连接哪几个节点，每一个节点以ip:port方式提供，多个节点之间以逗号分隔。注意：在使用ES进行操作时，如果某一个节点连接失败，ES会自动调到另一个节点去进行操作。
+        例如9300端口的节点失败了，ES会自动去9301端口的节点访问。这是ES的内部机制，不需要代码干预。 -->
+    <!-- 3.client-transport-sniff表明是否需要自动检测集群中除给出的cluster-nodes以外的其他节点，并将检测到的节点添加到cluster-nodes列表中。这样做的好处是，如果原始的cluster-nodes给出的节点都挂掉后，
+        可以自动跳转到侦测到的集群中的其他存活的节点中。注意：只有第一次使用ES进行操作时，才会进行自动嗅探集群中其他节点的操作。也就是说，在第一次使用ES进行操作时，cluster-nodes给出的节点中必须有一个
+        是存活的，都不存活的话就没办法连接到节点并进行嗅探了。-->
+    <elasticsearch:transport-client id="client" cluster-name="my-elasticsearch" client-transport-sniff="true"
+                                    cluster-nodes="127.0.0.1:9300,127.0.0.1:9301"/>
 
     <bean id="elasticsearchTemplate" class="org.springframework.data.elasticsearch.core.ElasticsearchTemplate"
           c:client-ref="client"/>
 
-    <elasticsearch:repositories base-package="com.spring.elasticsearch.repository"
+    <!-- 启动ES repository -->
+    <elasticsearch:repositories base-package="com.spring.service.repository" repository-impl-postfix="Impl"
                                 elasticsearch-template-ref="elasticsearchTemplate"/>
 </beans>

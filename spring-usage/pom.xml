@@ -513,25 +513,51 @@
                 <version>${spring.data.version}</version>
             </dependency>
 
+            <!--使用3.1.1版本就可以连接ES6.0版本的服务器了-->
             <!-- https://mvnrepository.com/artifact/org.springframework.data/spring-data-elasticsearch -->
             <dependency>
                 <groupId>org.springframework.data</groupId>
                 <artifactId>spring-data-elasticsearch</artifactId>
-                <version>3.0.8.RELEASE</version>
+                <version>3.1.1.RELEASE</version>
             </dependency>
 
+            <!-- https://mvnrepository.com/artifact/com.alibaba/fastjson -->
+            <dependency>
+                <groupId>com.alibaba</groupId>
+                <artifactId>fastjson</artifactId>
+                <version>${fastjson.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
     <dependencies>
+        <!-- spring boot starter log4j2包含了大部分日志需要的构件：log4j2、slf4j、 log4j-slf4j-impl（log4j2与slf4j的桥接）、jul-to-slf4j（jul(java.util.logging)与slf4j的桥接） -->
+        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-log4j2 -->
         <dependency>
-            <groupId>log4j</groupId>
-            <artifactId>log4j</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-log4j2</artifactId>
+            <version>2.0.5.RELEASE</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>log4j-core</artifactId>
+                    <groupId>org.apache.logging.log4j</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/org.apache.logging.log4j/log4j-core -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
+            <version>2.10.0</version>
+        </dependency>
+
+        <!-- log4j2异步日志输出时需要使用的构件，没有这个构件的话，异步日志是输出不了内容的 -->
+        <!-- https://mvnrepository.com/artifact/com.lmax/disruptor -->
+        <dependency>
+            <groupId>com.lmax</groupId>
+            <artifactId>disruptor</artifactId>
+            <version>3.4.2</version>
         </dependency>
 
         <dependency>
@@ -675,5 +701,6 @@
         <aspectjweaver.version>1.8.10</aspectjweaver.version>
         <jdbc.driver.oracle.version>12.1.0.1-atlassian-hosted</jdbc.driver.oracle.version>
         <ehcache.version>2.10.4</ehcache.version>
+        <fastjson.version>1.2.51</fastjson.version>
     </properties>
 </project>

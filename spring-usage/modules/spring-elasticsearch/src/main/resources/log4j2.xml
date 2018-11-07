@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="info" strict="false">
+    <Properties>
+        <Property name="layout.pattern">[%p][%d{yyyy-MM-dd HH:mm:ss}] -- %m -- [%C]%n</Property>
+        <Property name="log.path">D:/logs/spring-usage</Property>
+    </Properties>
+
+    <Appenders>
+        <Console target="SYSTEM_OUT" bufferedIo="true" bufferSize="1000" immediateFlush="false" ignoreExceptions="false"
+                 name="consoleAppender">
+            <PatternLayout pattern="${layout.pattern}"></PatternLayout>
+            <ThresholdFilter level="debug" onMatch="ACCEPT" onMismatch="DENY"></ThresholdFilter>
+        </Console>
+
+        <RollingRandomAccessFile fileName="${log.path}/info.log" filePattern="${log.path}/info-%i.log"
+                                 append="false" bufferedIo="true" bufferSize="5000" immediateFlush="true"
+                                 ignoreExceptions="true" name="infoAppender">
+            <PatternLayout pattern="[%p][%C] -- %m -- [%d{yyyy-MM-dd HH:mm:ss}][%c]%n"></PatternLayout>
+            <ThresholdFilter level="warn" onMatch="DENY" onMismatch="ACCEPT"></ThresholdFilter>
+            <SizeBasedTriggeringPolicy size="1M"></SizeBasedTriggeringPolicy>
+        </RollingRandomAccessFile>
+
+        <File fileName="${log.path}/error.log" append="false" bufferedIo="false" ignoreExceptions="true"
+              name="errorAppender">
+            <PatternLayout pattern="[%p]%m -- [%d{yyyy-MM-dd HH:mm:ss}]%n"></PatternLayout>
+            <ThresholdFilter level="warn" onMatch="ACCEPT" onMismatch="DENY"/>
+        </File>
+
+        <File fileName="${log.path}/spring.log" append="false" bufferedIo="true" bufferSize="2000"
+              immediateFlush="false" ignoreExceptions="false" name="springAppender">
+            <PatternLayout pattern="[%p] -- %m [%d{yyyy-MM-dd HH:mm:ss}][%C#%M:%L]%n"/>
+        </File>
+    </Appenders>
+
+    <Loggers>
+        <root level="debug">
+            <AppenderRef ref="consoleAppender"/>
+            <AppenderRef ref="infoAppender"/>
+            <AppenderRef ref="errorAppender"/>
+        </root>
+
+        <Logger name="org.springframework" level="debug" additivity="false">
+            <AppenderRef ref="springAppender"/>
+        </Logger>
+        <Logger name="org.elasticsearch" level="info" additivity="true"/>
+        <Logger name="io.netty" level="info" additivity="true"/>
+    </Loggers>
+</Configuration>
