@@ -43,6 +43,8 @@
         <module>modules/spring-mongo</module>
         <module>modules/spring-web-helloworld</module>
         <module>modules/spring-elasticsearch</module>
+        <module>spring-rabbitmq</module>
+        <module>modules/spring-rabbitmq</module>
     </modules>
 
     <distributionManagement>

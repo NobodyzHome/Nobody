@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.elasticsearch.core.ElasticsearchTemplate;
 import org.springframework.test.context.junit4.SpringRunner;
 
@@ -92,7 +93,28 @@ public class BasicEsTest {
 
         Map<String, Integer> groupByAge = userRepository.groupByAge(QueryBuilders.matchAllQuery());
         logger.info("获取到的数据：{}", JSON.toJSONString(groupByAge));
+
+        Map<String, Integer> groupByUpdateTime = userRepository.groupByUpdateTime(QueryBuilders.matchAllQuery());
+        logger.info("获取到的数据：{}", JSON.toJSONString(groupByUpdateTime));
     }
 
+    @Test
+    public void test5() {
+        Pageable pageable = PageRequest.of(0, 70);
+        do {
+            Page<BaseUser> baseUserPage = userRepository.findByIsValidTrue(pageable);
+            logger.info("【{}/{}】当前获取文档数量：{}，全部文档数量：{}", baseUserPage.getPageable().getPageNumber() + 1, baseUserPage.getTotalPages(), baseUserPage.getNumberOfElements(), baseUserPage.getTotalElements());
+            if (baseUserPage.hasNext()) {
+                pageable = baseUserPage.nextPageable();
+            } else {
+                break;
+            }
+        } while (true);
 
+        List<BaseUser> baseUserList = userRepository.findByAgeAfterAndIsValidFalse(30);
+        logger.info("获取到的数据：{}", JSON.toJSONString(baseUserList));
+
+        Page<BaseUser> baseUserPage = userRepository.findByFirstNameAndSecondName("阳", "狗", PageRequest.of(0, 10));
+        logger.info("当前获取到的数据：{}，全部数据：{}", baseUserPage.getNumberOfElements(), baseUserPage.getTotalElements());
+    }
 }

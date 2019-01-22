@@ -4,11 +4,13 @@ import com.springboot.data.domain.BaseUser;
 import com.springboot.data.domain.generate.DomainGenerator;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.script.Script;
-import org.elasticsearch.search.aggregations.Aggregation;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.bucket.histogram.Histogram;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.metrics.cardinality.Cardinality;
 import org.elasticsearch.search.aggregations.metrics.max.Max;
 import org.elasticsearch.search.aggregations.metrics.min.Min;
+import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -101,9 +103,53 @@ public class UserRepositoryCustomImpl implements UserRepositoryCustom {
             Max maxUpdateTime = bucket.getAggregations().get("maxUpdateTime");
             String max = maxUpdateTime.getValueAsString();
 
-            logger.debug("key={},文档数量={},minUpdateTime={},maxUpdateTime={}", key, docCount, min, max);
+            logger.info("key={},文档数量={},minUpdateTime={},maxUpdateTime={}", key, docCount, min, max);
         });
 
         return resultMap;
+    }
+
+    @Override
+    public Map<String, Integer> groupByUpdateTime(QueryBuilder queryBuilder) {
+        SearchQuery searchQuery = new NativeSearchQueryBuilder().withQuery(queryBuilder).addAggregation(AggregationBuilders.dateHistogram("groupByUpdateTime").field("updateTime")
+                .interval(TimeUnit.DAYS.toMillis(2)).format("yyyy-MM-dd").timeZone(DateTimeZone.forOffsetHours(8)).minDocCount(10).subAggregation(AggregationBuilders.min("minAge").field("age"))
+                .subAggregation(AggregationBuilders.max("maxAge").field("age"))).addAggregation(AggregationBuilders.cardinality("distinctAgeNo").field("age"))
+                .addAggregation(AggregationBuilders.histogram("groupByAgeNo").field("age").interval(10).minDocCount(0).missing(20)
+                        .subAggregation(AggregationBuilders.max("maxBirthDay").field("birthDay").timeZone(DateTimeZone.forOffsetHours(8))))
+                .build();
+
+        AggregatedPage<BaseUser> baseUsers = elasticsearchTemplate.queryForPage(searchQuery, BaseUser.class);
+        Histogram groupByUpdateTime = baseUsers.getAggregations().get("groupByUpdateTime");
+
+        Map<String, Integer> result = new HashMap<>(groupByUpdateTime.getBuckets().size());
+        groupByUpdateTime.getBuckets().forEach(bucket -> {
+            String time = bucket.getKeyAsString();
+            long docCount = bucket.getDocCount();
+
+            Min minAge = bucket.getAggregations().get("minAge");
+            double min = minAge.getValue();
+
+            Max maxAge = bucket.getAggregations().get("maxAge");
+            double max = maxAge.getValue();
+
+            logger.info("【{}】文档数量={}，minAge={}，maxAge={}", time, docCount, min, max);
+            result.put(time, Long.valueOf(docCount).intValue());
+        });
+
+        Cardinality cardinality = baseUsers.getAggregations().get("distinctAgeNo");
+        long distinctAgeNo = cardinality.getValue();
+        logger.info("distinct age count:{}", distinctAgeNo);
+
+        Histogram groupByAgeNo = baseUsers.getAggregations().get("groupByAgeNo");
+        groupByAgeNo.getBuckets().forEach(bucket -> {
+            String age = bucket.getKeyAsString();
+            long docCount = bucket.getDocCount();
+
+            Max maxBirthDay = bucket.getAggregations().get("maxBirthDay");
+            String max = maxBirthDay.getValueAsString();
+            logger.info("age={},docCount={},maxBirthDay={}", age, docCount, max);
+        });
+
+        return result;
     }
 }

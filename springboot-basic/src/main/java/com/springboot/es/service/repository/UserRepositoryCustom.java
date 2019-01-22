@@ -19,4 +19,6 @@ public interface UserRepositoryCustom {
     List<BaseUser> findAllByScroll(QueryBuilder queryBuilder);
 
     Map<String, Integer> groupByAge(QueryBuilder queryBuilder);
+
+    Map<String, Integer> groupByUpdateTime(QueryBuilder queryBuilder);
 }

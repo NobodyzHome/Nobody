@@ -16,4 +16,6 @@ public interface UserRepository extends ElasticsearchRepository<BaseUser, String
 
     @Query("{\"bool\":{\"must\":[{\"match\":{\"birthDay\":\"?0\"}},{\"range\":{\"age\":{\"gte\":?1,\"lt\":?2}}}],\"must_not\":[{\"match\":{\"code\":\"?3\"}}]}}")
     List<BaseUser> findByCustom(String birthDay, Integer ageStart, Integer ageEnd, String notCode);
+
+    Page<BaseUser> findByIsValidTrue(Pageable pageable);
 }
